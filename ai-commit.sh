@@ -191,9 +191,19 @@ echo -e "${YELLOW}────────────────────�
 echo "$COMMIT_MESSAGE"
 echo -e "${YELLOW}─────────────────────────────────────${NC}\n"
 
+# Check if remote repository exists
+HAS_REMOTE=false
+if git remote | grep -q .; then
+    HAS_REMOTE=true
+fi
+
 # Ask for confirmation with arrow key selector
 echo "What would you like to do?"
-select_option "Commit and push" "Cancel"
+if [ "$HAS_REMOTE" = true ]; then
+    select_option "Commit and push" "Cancel"
+else
+    select_option "Commit" "Cancel"
+fi
 choice=$?
 
 if [ $choice -eq 0 ]; then
@@ -201,13 +211,14 @@ if [ $choice -eq 0 ]; then
     git commit -m "$COMMIT_MESSAGE"
     echo -e "${GREEN}✓ Commit created successfully!${NC}"
 
-    # Push to remote
-    echo -e "${BLUE}Pushing to remote...${NC}"
-    if git push; then
-        echo -e "${GREEN}✓ Changes pushed successfully!${NC}"
-    else
-        echo -e "${RED}Error: Failed to push changes${NC}"
-        exit 1
+    # Push to remote if it exists
+    if [ "$HAS_REMOTE" = true ]; then
+        echo -e "${BLUE}Pushing to remote...${NC}"
+        if git push 2>/dev/null || git push --set-upstream origin $(git branch --show-current) 2>/dev/null; then
+            echo -e "${GREEN}✓ Changes pushed successfully!${NC}"
+        else
+            echo -e "${YELLOW}⚠ Failed to push changes (remote may not be configured)${NC}"
+        fi
     fi
 else
     echo -e "${YELLOW}Commit cancelled${NC}"
