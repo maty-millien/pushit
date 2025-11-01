@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# AI Commit - Generate commit messages using OpenRouter API
-# Usage: ./ai-commit.sh
+# pushit - Generate commit messages using AI and push to remote
+# Usage: ./pushit.sh
 
 set -e
 

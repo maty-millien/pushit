@@ -1,20 +1,22 @@
-# AI Commit
+# pushit
 
-A shell script that uses OpenRouter API to generate meaningful commit messages and asks for confirmation before committing.
+A shell script that uses OpenRouter API to generate meaningful commit messages, asks for confirmation, and pushes to remote.
 
 ## Features
 
 - Analyzes both staged and unstaged changes
 - Generates conventional commit messages using AI (via OpenRouter)
 - Shows generated message for review
-- Asks for confirmation before committing
+- Interactive menu to commit & push, regenerate, or cancel
 - Automatically stages all changes before committing
+- Pushes to remote repository (if configured)
 
 ## Setup
 
 1. Get an OpenRouter API key from [openrouter.ai](https://openrouter.ai)
 
 2. Set your API key as an environment variable:
+
    ```bash
    export OPENROUTER_API_KEY='your-api-key-here'
    ```
@@ -30,7 +32,7 @@ A shell script that uses OpenRouter API to generate meaningful commit messages a
 From any git repository:
 
 ```bash
-./ai-commit.sh
+./pushit.sh
 ```
 
 Or add it to your PATH for global access:
@@ -40,7 +42,7 @@ Or add it to your PATH for global access:
 export PATH="$PATH:/Users/maty/Projects/ai-commit"
 
 # Then use it anywhere:
-ai-commit.sh
+pushit.sh
 ```
 
 ## How It Works
@@ -49,8 +51,8 @@ ai-commit.sh
 2. Analyzes your git changes (staged and unstaged)
 3. Sends changes to OpenRouter API for analysis
 4. Displays the generated commit message
-5. Asks for your confirmation (y/n)
-6. If confirmed, stages all changes and creates the commit
+5. Presents interactive menu (commit & push / regenerate / cancel)
+6. If confirmed, stages all changes, creates the commit, and pushes to remote
 
 ## Requirements
 
@@ -59,6 +61,7 @@ ai-commit.sh
 - `jq` (JSON processor)
 
 Install jq if needed:
+
 ```bash
 # macOS
 brew install jq
@@ -70,18 +73,18 @@ sudo apt-get install jq
 ## Example
 
 ```bash
-$ ./ai-commit.sh
+$ ./pushit.sh
+Staging all changes...
 Analyzing changes...
 Generating commit message with AI...
 
 Generated commit message:
 ─────────────────────────────────────
 feat: add AI-powered commit message generator
-
-Implement shell script that uses OpenRouter API to analyze
-git changes and generate conventional commit messages with
-user confirmation before committing.
 ─────────────────────────────────────
 
-Do you want to commit with this message? (y/n):
+What would you like to do?
+❯ Commit and push
+  Regenerate
+  Cancel
 ```
