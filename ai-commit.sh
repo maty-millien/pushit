@@ -39,7 +39,7 @@ select_option() {
             fi
         done
 
-        # Read arrow keys
+        # Read arrow keys (3 bytes for escape sequences)
         read -rsn3 key
 
         case "$key" in
@@ -119,6 +119,9 @@ fi
 # Get git status for untracked files
 GIT_STATUS=$(git status --short)
 
+# Get recent commit history for context (last 10 commits)
+COMMIT_HISTORY=$(git log -10 --pretty=format:"%s" --no-merges 2>/dev/null || echo "No previous commits")
+
 # Create prompt for AI
 PROMPT="You are an expert Git commit message generator. Your sole task is to produce a single, concise, and conventionally formatted commit message subject line.
 
@@ -149,6 +152,11 @@ PROMPT="You are an expert Git commit message generator. Your sole task is to pro
 **Example of a valid output:**
 \`feat(auth): add user profile component and update api\`
 
+**Recent commit history (for style reference):**
+$COMMIT_HISTORY
+
+**Current changes:**
+
 Git status:
 $GIT_STATUS
 
@@ -158,71 +166,84 @@ $GIT_DIFF"
 # Escape the prompt for JSON
 PROMPT_JSON=$(echo "$PROMPT" | jq -Rs .)
 
-# Call OpenRouter API
-echo -e "${BLUE}Generating commit message with AI...${NC}"
-
-RESPONSE=$(curl -s "$OPENROUTER_API_URL" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $OPENROUTER_API_KEY" \
-    -H "HTTP-Referer: https://github.com/ai-commit" \
-    -H "X-Title: AI Commit" \
-    -d "{
-        \"model\": \"$OPENROUTER_MODEL\",
-        \"messages\": [
-            {
-                \"role\": \"user\",
-                \"content\": $PROMPT_JSON
-            }
-        ]
-    }")
-
-# Extract commit message from response
-COMMIT_MESSAGE=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
-
-if [ -z "$COMMIT_MESSAGE" ]; then
-    echo -e "${RED}Error: Failed to generate commit message${NC}"
-    echo "API Response: $RESPONSE"
-    exit 1
-fi
-
-# Display the generated commit message
-echo -e "\n${GREEN}Generated commit message:${NC}"
-echo -e "${YELLOW}─────────────────────────────────────${NC}"
-echo "$COMMIT_MESSAGE"
-echo -e "${YELLOW}─────────────────────────────────────${NC}\n"
-
 # Check if remote repository exists
 HAS_REMOTE=false
 if git remote | grep -q .; then
     HAS_REMOTE=true
 fi
 
-# Ask for confirmation with arrow key selector
-echo "What would you like to do?"
-if [ "$HAS_REMOTE" = true ]; then
-    select_option "Commit and push" "Cancel"
-else
-    select_option "Commit" "Cancel"
-fi
-choice=$?
+# Loop to allow regeneration
+while true; do
+    # Call OpenRouter API
+    echo -e "${BLUE}Generating commit message with AI...${NC}"
 
-if [ $choice -eq 0 ]; then
-    # Create the commit
-    git commit -m "$COMMIT_MESSAGE"
-    echo -e "${GREEN}✓ Commit created successfully!${NC}"
+    RESPONSE=$(curl -s "$OPENROUTER_API_URL" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+        -H "HTTP-Referer: https://github.com/ai-commit" \
+        -H "X-Title: AI Commit" \
+        -d "{
+            \"model\": \"$OPENROUTER_MODEL\",
+            \"messages\": [
+                {
+                    \"role\": \"user\",
+                    \"content\": $PROMPT_JSON
+                }
+            ]
+        }")
 
-    # Push to remote if it exists
-    if [ "$HAS_REMOTE" = true ]; then
-        echo -e "${BLUE}Pushing to remote...${NC}"
-        if git push 2>/dev/null || git push --set-upstream origin $(git branch --show-current) 2>/dev/null; then
-            echo -e "${GREEN}✓ Changes pushed successfully!${NC}"
-        else
-            echo -e "${YELLOW}⚠ Failed to push changes (remote may not be configured)${NC}"
-        fi
+    # Extract commit message from response
+    COMMIT_MESSAGE=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+
+    if [ -z "$COMMIT_MESSAGE" ]; then
+        echo -e "${RED}Error: Failed to generate commit message${NC}"
+        echo "API Response: $RESPONSE"
+        exit 1
     fi
-else
-    echo -e "${YELLOW}Commit cancelled${NC}"
-    # Unstage changes since user rejected the commit
-    git reset
-    exit 0
-fi
+
+    # Display the generated commit message
+    echo -e "\n${GREEN}Generated commit message:${NC}"
+    echo -e "${YELLOW}─────────────────────────────────────${NC}"
+    echo "$COMMIT_MESSAGE"
+    echo -e "${YELLOW}─────────────────────────────────────${NC}\n"
+
+    # Ask for confirmation with arrow key selector
+    echo "What would you like to do?"
+    if [ "$HAS_REMOTE" = true ]; then
+        set +e  # Disable exit on error for the selector
+        select_option "Commit and push" "Regenerate" "Cancel"
+        choice=$?
+        set -e  # Re-enable exit on error
+    else
+        set +e  # Disable exit on error for the selector
+        select_option "Commit" "Regenerate" "Cancel"
+        choice=$?
+        set -e  # Re-enable exit on error
+    fi
+
+    if [ $choice -eq 0 ]; then
+        # Create the commit
+        git commit -m "$COMMIT_MESSAGE"
+        echo -e "${GREEN}✓ Commit created successfully!${NC}"
+
+        # Push to remote if it exists
+        if [ "$HAS_REMOTE" = true ]; then
+            echo -e "${BLUE}Pushing to remote...${NC}"
+            if git push 2>/dev/null || git push --set-upstream origin $(git branch --show-current) 2>/dev/null; then
+                echo -e "${GREEN}✓ Changes pushed successfully!${NC}"
+            else
+                echo -e "${YELLOW}⚠ Failed to push changes (remote may not be configured)${NC}"
+            fi
+        fi
+        break
+    elif [ $choice -eq 1 ]; then
+        # Regenerate - loop continues
+        continue
+    else
+        # Cancel
+        echo -e "${YELLOW}Commit cancelled${NC}"
+        # Unstage changes since user rejected the commit
+        git reset
+        exit 0
+    fi
+done
