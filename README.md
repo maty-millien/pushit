@@ -23,9 +23,9 @@ A shell script that uses OpenRouter API to generate meaningful commit messages, 
 
 3. (Optional) Set your preferred model:
    ```bash
-   export OPENROUTER_MODEL='anthropic/claude-3.5-sonnet'
+   export OPENROUTER_MODEL='your-preferred-model-here'
    ```
-   Default model: `anthropic/claude-3.5-sonnet`
+   Default model: `mistralai/mixtral-8x22b-instruct`
 
 ## Usage
 
