@@ -18,14 +18,14 @@ A shell script that uses OpenRouter API to generate meaningful commit messages, 
 2. Set your API key as an environment variable:
 
    ```bash
-   export OPENROUTER_API_KEY='your-api-key-here'
+   OPENROUTER_API_KEY='your-api-key-here'
    ```
 
 3. (Optional) Set your preferred model:
    ```bash
-   export OPENROUTER_MODEL='your-preferred-model-here'
+   OPENROUTER_MODEL='your-preferred-model-here'
    ```
-   Default model: `mistralai/mixtral-8x22b-instruct`
+   Default model: `google/gemini-2.5-flash-lite-preview-09-2025`
 
 ## Usage
 
@@ -39,7 +39,7 @@ Or add it to your PATH for global access:
 
 ```bash
 # Add to your ~/.bashrc or ~/.zshrc
-export PATH="$PATH:/Users/maty/Projects/ai-commit"
+export PATH="$PATH:/Users/maty/Projects/pushit"
 
 # Then use it anywhere:
 pushit.sh
