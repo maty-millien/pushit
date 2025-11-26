@@ -3,7 +3,6 @@ import { generateCommitMessage } from "./api";
 import { loadConfig } from "./config";
 import { buildContext } from "./context";
 import * as git from "./git";
-import { displayCommitMessage } from "./ui";
 
 async function main(): Promise<void> {
   p.intro("pushit - AI-powered git commits");
@@ -47,7 +46,7 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
-    displayCommitMessage(message);
+    p.note(message, "Commit message");
 
     const options = [
       remoteExists
