@@ -16,8 +16,6 @@ Generate perfect [Conventional Commits](https://www.conventionalcommits.org/) fr
 
 ---
 
-<div align="center">
-
 ```
 ┌  pushit - AI-powered git commits
 │
@@ -38,8 +36,6 @@ Generate perfect [Conventional Commits](https://www.conventionalcommits.org/) fr
 │  ○ Regenerate
 │  ○ Cancel
 ```
-
-</div>
 
 ---
 
