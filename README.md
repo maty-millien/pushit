@@ -34,7 +34,7 @@ Generate conventional commit messages from your changes and optionally push to r
 > **Prerequisites:** [Bun](https://bun.sh) runtime
 
 ```bash
-git clone https://github.com/matyas-cimbulka/pushit
+git clone https://github.com/maty-millien/pushit
 cd pushit
 bun install
 bun run install
