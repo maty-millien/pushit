@@ -1,90 +1,123 @@
 # pushit
 
-A shell script that uses OpenRouter API to generate meaningful commit messages, asks for confirmation, and pushes to remote.
+AI-powered git commits with a beautiful terminal UI. Analyzes your changes, generates meaningful commit messages, and pushes to remote.
 
 ## Features
 
-- Analyzes both staged and unstaged changes
-- Generates conventional commit messages using AI (via OpenRouter)
-- Shows generated message for review
-- Interactive menu to commit & push, regenerate, or cancel
-- Automatically stages all changes before committing
-- Pushes to remote repository (if configured)
+- Beautiful terminal UI with spinners and styled prompts
+- Analyzes staged changes with full file context
+- Detects project type (Node, Bun, Rust, Python, Go)
+- Extracts issue numbers from branch names
+- Uses commit history for style matching
+- Generates conventional commit messages via OpenRouter
+- Interactive menu: commit & push, regenerate, or cancel
+
+## Installation
+
+### Option 1: Download Binary
+
+Download the pre-built binary for your platform and add it to your PATH.
+
+### Option 2: Build from Source
+
+Requires [Bun](https://bun.sh) to be installed.
+
+```bash
+# Clone the repo
+git clone https://github.com/yourusername/pushit
+cd pushit
+
+# Install dependencies
+bun install
+
+# Build the executable
+bun run build
+
+# Move to your PATH
+mv pushit /usr/local/bin/
+```
 
 ## Setup
 
 1. Get an OpenRouter API key from [openrouter.ai](https://openrouter.ai)
 
-2. Set your API key as an environment variable:
+2. Create a `.env` file in the pushit directory or set environment variables:
 
    ```bash
    OPENROUTER_API_KEY='your-api-key-here'
+   OPENROUTER_MODEL='google/gemini-2.5-flash-lite-preview-09-2025'  # Optional
    ```
-
-3. (Optional) Set your preferred model:
-   ```bash
-   OPENROUTER_MODEL='your-preferred-model-here'
-   ```
-   Default model: `google/gemini-2.5-flash-lite-preview-09-2025`
 
 ## Usage
 
 From any git repository:
 
 ```bash
-./pushit.sh
+pushit
 ```
 
-Or add it to your PATH for global access:
+Or run in development mode:
 
 ```bash
-# Add to your ~/.bashrc or ~/.zshrc
-export PATH="$PATH:/Users/maty/Projects/pushit"
-
-# Then use it anywhere:
-pushit.sh
+bun run dev
 ```
 
 ## How It Works
 
-1. Checks if you're in a git repository
-2. Analyzes your git changes (staged and unstaged)
-3. Sends changes to OpenRouter API for analysis
-4. Displays the generated commit message
-5. Presents interactive menu (commit & push / regenerate / cancel)
-6. If confirmed, stages all changes, creates the commit, and pushes to remote
-
-## Requirements
-
-- `git`
-- `curl`
-- `jq` (JSON processor)
-
-Install jq if needed:
-
-```bash
-# macOS
-brew install jq
-
-# Ubuntu/Debian
-sudo apt-get install jq
-```
+1. Validates git repository and checks for changes
+2. Stages all changes automatically
+3. Gathers enhanced context:
+   - Git diff and status
+   - Full file contents (up to 500 lines each)
+   - Project metadata (from package.json, Cargo.toml, etc.)
+   - Branch name and linked issue detection
+   - Last 20 commits for style reference
+4. Sends context to OpenRouter for analysis
+5. Displays generated commit message
+6. Interactive selection: commit & push / regenerate / cancel
 
 ## Example
 
-```bash
-$ ./pushit.sh
-Staging all changes...
-Analyzing changes...
-Generating commit message with AI...
-
-Generated commit message:
-─────────────────────────────────────
-feat: add AI-powered commit message generator
-─────────────────────────────────────
-
-What would you like to do?
-❯ Commit and push
-  Regenerate
-  Cancel
 ```
+$ pushit
+
+  pushit - AI-powered git commits
+
+  Staging changes...
+  Analysis complete
+
+  Generated commit message
+  ─────────────────────────────────────────────────
+  feat(auth): add user login endpoint
+  ─────────────────────────────────────────────────
+
+  What would you like to do?
+  ● Commit and push
+  ○ Regenerate
+  ○ Cancel
+
+  Commit created successfully!
+  Pushing to remote...
+  Changes pushed successfully!
+
+  Done!
+```
+
+## Development
+
+```bash
+# Run in dev mode
+bun run dev
+
+# Type check
+bun run typecheck
+
+# Build executable
+bun run build
+```
+
+## Requirements
+
+- [Bun](https://bun.sh) runtime (for building/development)
+- Git
+- OpenRouter API key
