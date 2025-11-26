@@ -55,13 +55,12 @@ pushit
 ◇  Analysis complete
 │
 ◇  Message generated
-
-╭───────────────────────────────────────────╮
-│                                           │
-│   refactor: set default model in config   │
-│                                           │
-╰───────────────────────────────────────────╯
-
+│
+◇  Commit message ────────────────────╮
+│                                     │
+│  refactor(cli): simplify ui output  │
+│                                     │
+├─────────────────────────────────────╯
 │
 ◇  What would you like to do?
 │  Commit and push

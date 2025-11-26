@@ -2,7 +2,7 @@ import * as p from "@clack/prompts";
 import type { Config } from "./types";
 
 export const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-export const DEFAULT_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";
+export const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-09-2025";
 
 export const MAX_FILE_SIZE = 50 * 1024; // 50 KB
 export const MAX_LINES_PER_FILE = 500;
