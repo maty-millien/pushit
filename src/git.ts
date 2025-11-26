@@ -1,3 +1,5 @@
+import type { GitResult } from "./types";
+
 function git(args: string[]): {
   stdout: string;
   success: boolean;
@@ -60,7 +62,7 @@ export function hasRemote(): boolean {
   return result.stdout.length > 0;
 }
 
-export function commit(message: string): { success: boolean; error?: string } {
+export function commit(message: string): GitResult {
   const result = git(["commit", "-m", message]);
   return {
     success: result.success,
@@ -68,7 +70,7 @@ export function commit(message: string): { success: boolean; error?: string } {
   };
 }
 
-export function push(): { success: boolean; error?: string } {
+export function push(): GitResult {
   const result = git(["push"]);
   if (result.success) {
     return { success: true };

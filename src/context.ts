@@ -1,54 +1,7 @@
+import * as path from "path";
 import * as git from "./git";
-
-export interface ProjectInfo {
-  type: "node" | "bun" | "rust" | "python" | "go" | "unknown";
-  name?: string;
-  version?: string;
-}
-
-export interface GitContext {
-  branch: string;
-  linkedIssue?: string;
-  diff: string;
-  status: string;
-  changedFiles: string[];
-  fileContents: Map<string, string>;
-  commitHistory: string[];
-  project: ProjectInfo;
-}
-
-const MAX_FILE_SIZE = 50 * 1024; // 50 KB
-const MAX_LINES_PER_FILE = 500;
-const BINARY_EXTENSIONS = new Set([
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".gif",
-  ".webp",
-  ".ico",
-  ".svg",
-  ".woff",
-  ".woff2",
-  ".ttf",
-  ".eot",
-  ".otf",
-  ".pdf",
-  ".zip",
-  ".tar",
-  ".gz",
-  ".rar",
-  ".mp3",
-  ".mp4",
-  ".wav",
-  ".avi",
-  ".mov",
-  ".exe",
-  ".dll",
-  ".so",
-  ".dylib",
-  ".lock",
-  ".lockb",
-]);
+import type { GitContext, ProjectInfo } from "./types";
+import { BINARY_EXTENSIONS, MAX_FILE_SIZE, MAX_LINES_PER_FILE } from "./config";
 
 export function extractIssueFromBranch(branch: string): string | undefined {
   const patterns = [
@@ -69,25 +22,24 @@ export function extractIssueFromBranch(branch: string): string | undefined {
 export async function detectProjectType(): Promise<ProjectInfo> {
   const cwd = process.cwd();
 
-  try {
-    const bunLock = Bun.file(`${cwd}/bun.lockb`);
-    if (await bunLock.exists()) {
-      const pkg = await tryReadPackageJson(cwd);
-      return { type: "bun", name: pkg?.name, version: pkg?.version };
-    }
-  } catch {}
-
-  try {
+  // Check for Bun project
+  const bunLockPath = path.join(cwd, "bun.lockb");
+  if (await fileExists(bunLockPath)) {
     const pkg = await tryReadPackageJson(cwd);
-    if (pkg) {
-      return { type: "node", name: pkg.name, version: pkg.version };
-    }
-  } catch {}
+    return { type: "bun", name: pkg?.name, version: pkg?.version };
+  }
 
-  try {
-    const cargoFile = Bun.file(`${cwd}/Cargo.toml`);
-    if (await cargoFile.exists()) {
-      const content = await cargoFile.text();
+  // Check for Node project
+  const pkg = await tryReadPackageJson(cwd);
+  if (pkg) {
+    return { type: "node", name: pkg.name, version: pkg.version };
+  }
+
+  // Check for Rust project
+  const cargoPath = path.join(cwd, "Cargo.toml");
+  if (await fileExists(cargoPath)) {
+    const content = await safeReadFile(cargoPath);
+    if (content) {
       const nameMatch = content.match(/name\s*=\s*"([^"]+)"/);
       const versionMatch = content.match(/version\s*=\s*"([^"]+)"/);
       return {
@@ -96,42 +48,59 @@ export async function detectProjectType(): Promise<ProjectInfo> {
         version: versionMatch?.[1],
       };
     }
-  } catch {}
+  }
 
-  try {
-    const pyproject = Bun.file(`${cwd}/pyproject.toml`);
-    const setup = Bun.file(`${cwd}/setup.py`);
-    if ((await pyproject.exists()) || (await setup.exists())) {
-      return { type: "python" };
-    }
-  } catch {}
+  // Check for Python project
+  const pyprojectPath = path.join(cwd, "pyproject.toml");
+  const setupPath = path.join(cwd, "setup.py");
+  if ((await fileExists(pyprojectPath)) || (await fileExists(setupPath))) {
+    return { type: "python" };
+  }
 
-  try {
-    const goMod = Bun.file(`${cwd}/go.mod`);
-    if (await goMod.exists()) {
-      const content = await goMod.text();
+  // Check for Go project
+  const goModPath = path.join(cwd, "go.mod");
+  if (await fileExists(goModPath)) {
+    const content = await safeReadFile(goModPath);
+    if (content) {
       const moduleMatch = content.match(/module\s+(\S+)/);
       return { type: "go", name: moduleMatch?.[1] };
     }
-  } catch {}
+  }
 
   return { type: "unknown" };
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    return await Bun.file(filePath).exists();
+  } catch {
+    return false;
+  }
+}
+
+async function safeReadFile(filePath: string): Promise<string | null> {
+  try {
+    return await Bun.file(filePath).text();
+  } catch {
+    return null;
+  }
 }
 
 async function tryReadPackageJson(
   cwd: string
 ): Promise<{ name?: string; version?: string } | null> {
+  const pkgPath = path.join(cwd, "package.json");
+  if (!(await fileExists(pkgPath))) return null;
+
   try {
-    const pkgFile = Bun.file(`${cwd}/package.json`);
-    if (await pkgFile.exists()) {
-      return await pkgFile.json();
-    }
-  } catch {}
-  return null;
+    return await Bun.file(pkgPath).json();
+  } catch {
+    return null;
+  }
 }
 
 function isBinaryFile(filePath: string): boolean {
-  const ext = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
+  const ext = path.extname(filePath).toLowerCase();
   return BINARY_EXTENSIONS.has(ext);
 }
 
@@ -145,7 +114,7 @@ export async function readFileContents(
     if (isBinaryFile(file)) continue;
 
     try {
-      const filePath = `${cwd}/${file}`;
+      const filePath = path.join(cwd, file);
       const bunFile = Bun.file(filePath);
 
       const size = bunFile.size;
@@ -162,7 +131,9 @@ export async function readFileContents(
       } else {
         contents.set(file, text);
       }
-    } catch {}
+    } catch {
+      // Skip files that can't be read (permissions, etc.)
+    }
   }
 
   return contents;
