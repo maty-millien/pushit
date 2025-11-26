@@ -7,7 +7,7 @@ import * as git from "./git";
 async function main(): Promise<void> {
   p.intro("pushit - AI-powered git commits");
 
-  const config = loadConfig();
+  const config = await loadConfig();
 
   if (!git.isGitRepo()) {
     p.cancel("Not a git repository");
