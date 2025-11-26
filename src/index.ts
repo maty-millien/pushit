@@ -45,7 +45,9 @@ function loadConfig(): Config {
 
   return {
     apiKey,
-    model: process.env.OPENROUTER_MODEL || "",
+    model:
+      process.env.OPENROUTER_MODEL ||
+      "google/gemini-2.5-flash-lite-preview-09-2025",
     apiUrl: "https://openrouter.ai/api/v1/chat/completions",
   };
 }
