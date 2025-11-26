@@ -3,16 +3,13 @@ import color from "picocolors";
 import { buildContext, buildPrompt, type GitContext } from "./context";
 import * as git from "./git";
 
-// Display commit message prominently
 function displayCommitMessage(message: string): void {
   const padding = 3;
   const boxWidth = message.length + padding * 2;
 
-  const topBorder = "╭" + "─".repeat(boxWidth) + "╮";
-  const bottomBorder = "╰" + "─".repeat(boxWidth) + "╯";
-  const emptyLine = "│" + " ".repeat(boxWidth) + "│";
-  const messageLine =
-    "│" + " ".repeat(padding) + message + " ".repeat(padding) + "│";
+  const topBorder = `╭${"─".repeat(boxWidth)}╮`;
+  const bottomBorder = `╰${"─".repeat(boxWidth)}╯`;
+  const emptyLine = `│${" ".repeat(boxWidth)}│`;
 
   console.log();
   console.log(color.dim(topBorder));
@@ -29,7 +26,6 @@ function displayCommitMessage(message: string): void {
   console.log();
 }
 
-// Configuration
 interface Config {
   apiKey: string;
   model: string;
@@ -52,7 +48,6 @@ function loadConfig(): Config {
   };
 }
 
-// OpenRouter streaming API call
 async function generateCommitMessage(
   context: GitContext,
   config: Config
@@ -122,41 +117,33 @@ async function generateCommitMessage(
   return message.trim();
 }
 
-// Main function
 async function main(): Promise<void> {
   p.intro("pushit - AI-powered git commits");
 
-  // Load configuration
   const config = loadConfig();
 
-  // Validate git repository
   if (!git.isGitRepo()) {
     p.cancel("Not a git repository");
     process.exit(1);
   }
 
-  // Check for changes
   if (!git.hasChanges()) {
     p.outro("No changes to commit");
     process.exit(0);
   }
 
-  // Stage all changes
   const stageSpinner = p.spinner();
   stageSpinner.start("Staging changes...");
   git.stageAll();
   stageSpinner.stop("Changes staged");
 
-  // Build context
   const contextSpinner = p.spinner();
   contextSpinner.start("Analyzing changes...");
   const context = await buildContext();
   contextSpinner.stop("Analysis complete");
 
-  // Check if remote exists
   const remoteExists = git.hasRemote();
 
-  // Generate commit message loop
   while (true) {
     const generateSpinner = p.spinner();
     generateSpinner.start("Generating commit message...");
@@ -172,10 +159,8 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
-    // Display the generated commit message
     displayCommitMessage(message);
 
-    // Build options based on remote availability
     const options = remoteExists
       ? [
           { value: "commit_push" as const, label: "Commit and push" },
@@ -203,7 +188,6 @@ async function main(): Promise<void> {
       continue;
     }
 
-    // Commit
     const commitResult = git.commit(message);
     if (!commitResult.success) {
       p.cancel(`Failed to commit: ${commitResult.error}`);
@@ -211,7 +195,6 @@ async function main(): Promise<void> {
     }
     p.log.success("Commit created successfully!");
 
-    // Push if requested
     if (action === "commit_push") {
       const pushSpinner = p.spinner();
       pushSpinner.start("Pushing to remote...");
@@ -229,7 +212,6 @@ async function main(): Promise<void> {
   p.outro("Done!");
 }
 
-// Run
 main().catch((error) => {
   console.error("Fatal error:", error);
   process.exit(1);

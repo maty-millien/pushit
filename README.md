@@ -22,9 +22,10 @@ Requires [Bun](https://bun.sh).
 git clone https://github.com/matyas-cimbulka/pushit
 cd pushit
 bun install
-bun run build
-mv pushit /usr/local/bin/
+bun run install
 ```
+
+This builds the binary and installs it to `~/.local/bin`. Make sure `~/.local/bin` is in your PATH.
 
 ## Setup
 
@@ -47,43 +48,39 @@ pushit
 ## Example
 
 ```
-◇  pushit - AI-powered git commits
-
-◐  Staging changes...
+┌  pushit - AI-powered git commits
+│
 ◇  Changes staged
-
-◐  Analyzing changes...
+│
 ◇  Analysis complete
-
-◐  Generating commit message...
+│
 ◇  Message generated
 
-╭────────────────────────────────────────────╮
-│                                            │
-│   feat(auth): add user login endpoint      │
-│                                            │
-╰────────────────────────────────────────────╯
+╭───────────────────────────────────────────╮
+│                                           │
+│   refactor: set default model in config   │
+│                                           │
+╰───────────────────────────────────────────╯
 
-◆  What would you like to do?
-│  ● Commit and push
-│  ○ Regenerate
-│  ○ Cancel
-└
-
-◇  Commit created successfully!
-
-◐  Pushing to remote...
+│
+◇  What would you like to do?
+│  Commit and push
+│
+◆  Commit created successfully!
+│
 ◇  Changes pushed successfully!
-
-◇  Done!
+│
+└  Done!
 ```
 
 ## Development
 
 ```bash
 bun run dev        # Run in development mode
+bun run lint       # Lint with ESLint
 bun run typecheck  # Type check
 bun run build      # Build executable
+bun run install    # Build and install to ~/.local/bin
 ```
 
 ## Requirements

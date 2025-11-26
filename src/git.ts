@@ -1,6 +1,8 @@
-// Git operations using Bun.spawnSync
-
-function git(args: string[]): { stdout: string; success: boolean; stderr: string } {
+function git(args: string[]): {
+  stdout: string;
+  success: boolean;
+  stderr: string;
+} {
   const result = Bun.spawnSync(["git", ...args]);
   return {
     stdout: new TextDecoder().decode(result.stdout).trim(),
@@ -15,7 +17,6 @@ export function isGitRepo(): boolean {
 }
 
 export function hasChanges(): boolean {
-  // Check for staged, unstaged, or untracked files
   const staged = git(["diff", "--cached", "--quiet"]);
   const unstaged = git(["diff", "--quiet"]);
   const untracked = git(["ls-files", "--others", "--exclude-standard"]);
@@ -68,13 +69,11 @@ export function commit(message: string): { success: boolean; error?: string } {
 }
 
 export function push(): { success: boolean; error?: string } {
-  // First try regular push
   const result = git(["push"]);
   if (result.success) {
     return { success: true };
   }
 
-  // Try setting upstream
   const branch = getBranchName();
   const upstreamResult = git(["push", "--set-upstream", "origin", branch]);
   return {

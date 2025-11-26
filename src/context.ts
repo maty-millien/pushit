@@ -1,6 +1,5 @@
 import * as git from "./git";
 
-// Types
 export interface ProjectInfo {
   type: "node" | "bun" | "rust" | "python" | "go" | "unknown";
   name?: string;
@@ -18,26 +17,46 @@ export interface GitContext {
   project: ProjectInfo;
 }
 
-// Constants
-const MAX_FILE_SIZE = 50 * 1024; // 50KB
+const MAX_FILE_SIZE = 50 * 1024; // 50 KB
 const MAX_LINES_PER_FILE = 500;
 const BINARY_EXTENSIONS = new Set([
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".svg",
-  ".woff", ".woff2", ".ttf", ".eot", ".otf",
-  ".pdf", ".zip", ".tar", ".gz", ".rar",
-  ".mp3", ".mp4", ".wav", ".avi", ".mov",
-  ".exe", ".dll", ".so", ".dylib",
-  ".lock", ".lockb",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".ico",
+  ".svg",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".eot",
+  ".otf",
+  ".pdf",
+  ".zip",
+  ".tar",
+  ".gz",
+  ".rar",
+  ".mp3",
+  ".mp4",
+  ".wav",
+  ".avi",
+  ".mov",
+  ".exe",
+  ".dll",
+  ".so",
+  ".dylib",
+  ".lock",
+  ".lockb",
 ]);
 
-// Extract issue number from branch name
 export function extractIssueFromBranch(branch: string): string | undefined {
   const patterns = [
-    /\/(\d+)-/,              // feat/123-add-login
-    /\/([A-Z]+-\d+)/,        // feat/PROJ-123-add-login
-    /issue-(\d+)/i,          // issue-123
-    /#(\d+)/,                // #123
-    /-(\d+)$/,               // feature-123
+    /\/(\d+)-/,
+    /\/([A-Z]+-\d+)/,
+    /issue-(\d+)/i,
+    /#(\d+)/,
+    /-(\d+)$/,
   ];
 
   for (const pattern of patterns) {
@@ -47,11 +66,9 @@ export function extractIssueFromBranch(branch: string): string | undefined {
   return undefined;
 }
 
-// Detect project type from manifest files
 export async function detectProjectType(): Promise<ProjectInfo> {
   const cwd = process.cwd();
 
-  // Check for Bun first (more specific than Node)
   try {
     const bunLock = Bun.file(`${cwd}/bun.lockb`);
     if (await bunLock.exists()) {
@@ -60,7 +77,6 @@ export async function detectProjectType(): Promise<ProjectInfo> {
     }
   } catch {}
 
-  // Check for package.json (Node)
   try {
     const pkg = await tryReadPackageJson(cwd);
     if (pkg) {
@@ -68,7 +84,6 @@ export async function detectProjectType(): Promise<ProjectInfo> {
     }
   } catch {}
 
-  // Check for Cargo.toml (Rust)
   try {
     const cargoFile = Bun.file(`${cwd}/Cargo.toml`);
     if (await cargoFile.exists()) {
@@ -83,7 +98,6 @@ export async function detectProjectType(): Promise<ProjectInfo> {
     }
   } catch {}
 
-  // Check for pyproject.toml or setup.py (Python)
   try {
     const pyproject = Bun.file(`${cwd}/pyproject.toml`);
     const setup = Bun.file(`${cwd}/setup.py`);
@@ -92,7 +106,6 @@ export async function detectProjectType(): Promise<ProjectInfo> {
     }
   } catch {}
 
-  // Check for go.mod (Go)
   try {
     const goMod = Bun.file(`${cwd}/go.mod`);
     if (await goMod.exists()) {
@@ -105,7 +118,9 @@ export async function detectProjectType(): Promise<ProjectInfo> {
   return { type: "unknown" };
 }
 
-async function tryReadPackageJson(cwd: string): Promise<{ name?: string; version?: string } | null> {
+async function tryReadPackageJson(
+  cwd: string
+): Promise<{ name?: string; version?: string } | null> {
   try {
     const pkgFile = Bun.file(`${cwd}/package.json`);
     if (await pkgFile.exists()) {
@@ -115,47 +130,44 @@ async function tryReadPackageJson(cwd: string): Promise<{ name?: string; version
   return null;
 }
 
-// Check if file is binary based on extension
 function isBinaryFile(filePath: string): boolean {
   const ext = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
   return BINARY_EXTENSIONS.has(ext);
 }
 
-// Read file contents with size and line limits
-export async function readFileContents(files: string[]): Promise<Map<string, string>> {
+export async function readFileContents(
+  files: string[]
+): Promise<Map<string, string>> {
   const contents = new Map<string, string>();
   const cwd = process.cwd();
 
   for (const file of files) {
-    // Skip binary files
     if (isBinaryFile(file)) continue;
 
     try {
       const filePath = `${cwd}/${file}`;
       const bunFile = Bun.file(filePath);
 
-      // Skip large files
       const size = bunFile.size;
       if (size > MAX_FILE_SIZE) continue;
 
       const text = await bunFile.text();
       const lines = text.split("\n");
 
-      // Truncate to max lines
       if (lines.length > MAX_LINES_PER_FILE) {
-        contents.set(file, lines.slice(0, MAX_LINES_PER_FILE).join("\n") + "\n... (truncated)");
+        contents.set(
+          file,
+          `${lines.slice(0, MAX_LINES_PER_FILE).join("\n")}\n... (truncated)`
+        );
       } else {
         contents.set(file, text);
       }
-    } catch {
-      // File might be deleted or inaccessible, skip it
-    }
+    } catch {}
   }
 
   return contents;
 }
 
-// Build the complete context
 export async function buildContext(): Promise<GitContext> {
   const branch = git.getBranchName();
   const changedFiles = git.getChangedFiles();
@@ -177,7 +189,6 @@ export async function buildContext(): Promise<GitContext> {
   };
 }
 
-// Build the AI prompt with all context
 export function buildPrompt(context: GitContext): string {
   const fileContentSection = Array.from(context.fileContents.entries())
     .map(([file, content]) => `--- ${file} ---\n${content}`)
@@ -237,5 +248,9 @@ ${context.status || "No status"}
 **Git diff (staged changes):**
 ${context.diff || "No diff"}
 
-${fileContentSection ? `**File contents (for understanding context):**\n${fileContentSection}` : ""}`;
+${
+  fileContentSection
+    ? `**File contents (for understanding context):**\n${fileContentSection}`
+    : ""
+}`;
 }
