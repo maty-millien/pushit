@@ -5,8 +5,6 @@ import { buildContext } from "./context";
 import * as git from "./git";
 
 async function main(): Promise<void> {
-  p.intro("pushit - AI-powered git commits");
-
   const config = await loadConfig();
 
   if (!git.isGitRepo()) {
