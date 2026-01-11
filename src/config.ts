@@ -55,8 +55,10 @@ async function loadEnvFile(): Promise<Record<string, string>> {
       if (eqIndex === -1) continue;
       const key = trimmed.slice(0, eqIndex).trim();
       let value = trimmed.slice(eqIndex + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) ||
-          (value.startsWith("'") && value.endsWith("'"))) {
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
         value = value.slice(1, -1);
       }
       env[key] = value;
@@ -73,7 +75,9 @@ export async function loadConfig(): Promise<Config> {
   const apiKey = process.env.OPENROUTER_API_KEY || fileEnv.OPENROUTER_API_KEY;
 
   if (!apiKey) {
-    p.cancel(`OPENROUTER_API_KEY not set. Add it to ${CONFIG_PATH} or export it.`);
+    p.cancel(
+      `OPENROUTER_API_KEY not set. Add it to ${CONFIG_PATH} or export it.`
+    );
     process.exit(1);
   }
 

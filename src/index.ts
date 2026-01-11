@@ -2,8 +2,8 @@ import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { generateCommitMessage } from "./api";
 import { loadConfig } from "./config";
-import { buildContext } from "./git/context";
 import * as git from "./git/commands";
+import { buildContext } from "./git/context";
 import type { GitOptions } from "./types";
 
 const TYPE_COLORS: Record<string, (s: string) => string> = {
@@ -61,14 +61,19 @@ async function main(): Promise<void> {
 
   const gitOptions: GitOptions = { dryRun };
 
-  const config = await loadConfig();
+  // Parallel validation: config + git checks
+  const [config, isRepo, hasChangesResult] = await Promise.all([
+    loadConfig(),
+    git.isGitRepo(),
+    git.hasChanges(),
+  ]);
 
-  if (!(await git.isGitRepo())) {
+  if (!isRepo) {
     p.cancel("Not a git repository");
     process.exit(1);
   }
 
-  if (!(await git.hasChanges())) {
+  if (!hasChangesResult) {
     p.outro("No changes to commit");
     process.exit(0);
   }
@@ -78,12 +83,14 @@ async function main(): Promise<void> {
   await git.stageAll(gitOptions);
   stageSpinner.stop("Changes staged");
 
+  // Parallel: analyze context + check remote
   const contextSpinner = p.spinner();
   contextSpinner.start("Analyzing changes...");
-  const context = await buildContext(gitOptions);
+  const [context, remoteExists] = await Promise.all([
+    buildContext(gitOptions),
+    git.hasRemote(),
+  ]);
   contextSpinner.stop("Analysis complete");
-
-  const remoteExists = await git.hasRemote();
 
   while (true) {
     const generateSpinner = p.spinner();

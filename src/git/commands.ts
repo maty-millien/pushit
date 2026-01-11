@@ -1,4 +1,4 @@
-import type { GitResult, GitOptions } from "../types";
+import type { GitOptions, GitResult } from "../types";
 
 async function git(args: string[]): Promise<{
   stdout: string;

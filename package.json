@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run src/index.ts --dry-run",
-    "build": "bun build src/index.ts --compile --outfile pushit --minify",
+    "build": "bun build src/index.ts --compile --outfile pushit --minify --no-compile-autoload-bunfig",
     "install": "bun run build && mkdir -p ~/.local/bin && mv pushit ~/.local/bin/ && mkdir -p ~/.config/pushit && cp -n .env ~/.config/pushit/.env 2>/dev/null || true",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"

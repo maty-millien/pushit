@@ -1,8 +1,8 @@
-import { join, extname } from "path";
+import { extname, join } from "path";
 import { BINARY_EXTENSIONS, MAX_FILE_SIZE, MAX_LINES_PER_FILE } from "../config";
-import * as git from "./commands";
-import type { GitContext, ProjectInfo, GitOptions } from "../types";
 import promptTemplate from "../prompt.md" with { type: "text" };
+import type { GitContext, GitOptions, ProjectInfo } from "../types";
+import * as git from "./commands";
 
 export function extractIssueFromBranch(branch: string): string | undefined {
   const patterns = [
@@ -23,43 +23,39 @@ export function extractIssueFromBranch(branch: string): string | undefined {
 export async function detectProjectType(): Promise<ProjectInfo> {
   const cwd = process.cwd();
 
-  const bunLockPath = join(cwd, "bun.lockb");
-  if (await fileExists(bunLockPath)) {
-    const pkg = await tryReadPackageJson(cwd);
+  // Check all project indicators in parallel for faster detection
+  const [bunLockExists, pkg, cargoContent, pyprojectExists, setupExists, goModContent] =
+    await Promise.all([
+      fileExists(join(cwd, "bun.lockb")),
+      tryReadPackageJson(cwd),
+      safeReadFile(join(cwd, "Cargo.toml")),
+      fileExists(join(cwd, "pyproject.toml")),
+      fileExists(join(cwd, "setup.py")),
+      safeReadFile(join(cwd, "go.mod")),
+    ]);
+
+  // Priority-based resolution
+  if (bunLockExists) {
     return { type: "bun", name: pkg?.name, version: pkg?.version };
   }
 
-  const pkg = await tryReadPackageJson(cwd);
   if (pkg) {
     return { type: "node", name: pkg.name, version: pkg.version };
   }
-  const cargoPath = join(cwd, "Cargo.toml");
-  if (await fileExists(cargoPath)) {
-    const content = await safeReadFile(cargoPath);
-    if (content) {
-      const nameMatch = content.match(/name\s*=\s*"([^"]+)"/);
-      const versionMatch = content.match(/version\s*=\s*"([^"]+)"/);
-      return {
-        type: "rust",
-        name: nameMatch?.[1],
-        version: versionMatch?.[1],
-      };
-    }
+
+  if (cargoContent) {
+    const nameMatch = cargoContent.match(/name\s*=\s*"([^"]+)"/);
+    const versionMatch = cargoContent.match(/version\s*=\s*"([^"]+)"/);
+    return { type: "rust", name: nameMatch?.[1], version: versionMatch?.[1] };
   }
 
-  const pyprojectPath = join(cwd, "pyproject.toml");
-  const setupPath = join(cwd, "setup.py");
-  if ((await fileExists(pyprojectPath)) || (await fileExists(setupPath))) {
+  if (pyprojectExists || setupExists) {
     return { type: "python" };
   }
 
-  const goModPath = join(cwd, "go.mod");
-  if (await fileExists(goModPath)) {
-    const content = await safeReadFile(goModPath);
-    if (content) {
-      const moduleMatch = content.match(/module\s+(\S+)/);
-      return { type: "go", name: moduleMatch?.[1] };
-    }
+  if (goModContent) {
+    const moduleMatch = goModContent.match(/module\s+(\S+)/);
+    return { type: "go", name: moduleMatch?.[1] };
   }
 
   return { type: "unknown" };
@@ -105,36 +101,32 @@ function isBinaryFile(filePath: string): boolean {
 export async function readFileContents(
   files: string[]
 ): Promise<Map<string, string>> {
-  const contents = new Map<string, string>();
   const cwd = process.cwd();
 
-  for (const file of files) {
-    if (isBinaryFile(file)) continue;
+  // Filter binary files first (synchronous, fast)
+  const textFiles = files.filter((file) => !isBinaryFile(file));
 
-    try {
-      const filePath = join(cwd, file);
-      const bunFile = Bun.file(filePath);
+  // Read all files in parallel for faster I/O
+  const results = await Promise.all(
+    textFiles.map(async (file) => {
+      try {
+        const bunFile = Bun.file(join(cwd, file));
+        if (bunFile.size > MAX_FILE_SIZE) return null;
 
-      const size = bunFile.size;
-      if (size > MAX_FILE_SIZE) continue;
+        const text = await bunFile.text();
+        const lines = text.split("\n");
 
-      const text = await bunFile.text();
-      const lines = text.split("\n");
-
-      if (lines.length > MAX_LINES_PER_FILE) {
-        contents.set(
-          file,
-          `${lines.slice(0, MAX_LINES_PER_FILE).join("\n")}\n... (truncated)`
-        );
-      } else {
-        contents.set(file, text);
+        if (lines.length > MAX_LINES_PER_FILE) {
+          return [file, `${lines.slice(0, MAX_LINES_PER_FILE).join("\n")}\n... (truncated)`] as const;
+        }
+        return [file, text] as const;
+      } catch {
+        return null;
       }
-    } catch {
-      // Skip files that can't be read
-    }
-  }
+    })
+  );
 
-  return contents;
+  return new Map(results.filter((r): r is [string, string] => r !== null));
 }
 
 export async function buildContext(options: GitOptions = {}): Promise<GitContext> {
