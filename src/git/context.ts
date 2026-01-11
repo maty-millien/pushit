@@ -1,5 +1,9 @@
 import { extname, join } from "path";
-import { BINARY_EXTENSIONS, MAX_FILE_SIZE, MAX_LINES_PER_FILE } from "../config";
+import {
+  BINARY_EXTENSIONS,
+  MAX_FILE_SIZE,
+  MAX_LINES_PER_FILE,
+} from "../config";
 import promptTemplate from "../prompt.md" with { type: "text" };
 import type { GitContext, GitOptions, ProjectInfo } from "../types";
 import * as git from "./commands";
@@ -24,15 +28,21 @@ export async function detectProjectType(): Promise<ProjectInfo> {
   const cwd = process.cwd();
 
   // Check all project indicators in parallel for faster detection
-  const [bunLockExists, pkg, cargoContent, pyprojectExists, setupExists, goModContent] =
-    await Promise.all([
-      fileExists(join(cwd, "bun.lockb")),
-      tryReadPackageJson(cwd),
-      safeReadFile(join(cwd, "Cargo.toml")),
-      fileExists(join(cwd, "pyproject.toml")),
-      fileExists(join(cwd, "setup.py")),
-      safeReadFile(join(cwd, "go.mod")),
-    ]);
+  const [
+    bunLockExists,
+    pkg,
+    cargoContent,
+    pyprojectExists,
+    setupExists,
+    goModContent,
+  ] = await Promise.all([
+    fileExists(join(cwd, "bun.lockb")),
+    tryReadPackageJson(cwd),
+    safeReadFile(join(cwd, "Cargo.toml")),
+    fileExists(join(cwd, "pyproject.toml")),
+    fileExists(join(cwd, "setup.py")),
+    safeReadFile(join(cwd, "go.mod")),
+  ]);
 
   // Priority-based resolution
   if (bunLockExists) {
@@ -80,7 +90,7 @@ async function safeReadFile(filePath: string): Promise<string | null> {
 }
 
 async function tryReadPackageJson(
-  cwd: string
+  cwd: string,
 ): Promise<{ name?: string; version?: string } | null> {
   const pkgPath = join(cwd, "package.json");
   if (!(await fileExists(pkgPath))) return null;
@@ -99,7 +109,7 @@ function isBinaryFile(filePath: string): boolean {
 }
 
 export async function readFileContents(
-  files: string[]
+  files: string[],
 ): Promise<Map<string, string>> {
   const cwd = process.cwd();
 
@@ -117,27 +127,33 @@ export async function readFileContents(
         const lines = text.split("\n");
 
         if (lines.length > MAX_LINES_PER_FILE) {
-          return [file, `${lines.slice(0, MAX_LINES_PER_FILE).join("\n")}\n... (truncated)`] as const;
+          return [
+            file,
+            `${lines.slice(0, MAX_LINES_PER_FILE).join("\n")}\n... (truncated)`,
+          ] as const;
         }
         return [file, text] as const;
       } catch {
         return null;
       }
-    })
+    }),
   );
 
   return new Map(results.filter((r): r is [string, string] => r !== null));
 }
 
-export async function buildContext(options: GitOptions = {}): Promise<GitContext> {
-  const [branch, changedFiles, status, diff, commitHistory, project] = await Promise.all([
-    git.getBranchName(),
-    git.getChangedFiles(options),
-    git.getStatus(),
-    git.getStagedDiff(options),
-    git.getCommitHistory(20),
-    detectProjectType(),
-  ]);
+export async function buildContext(
+  options: GitOptions = {},
+): Promise<GitContext> {
+  const [branch, changedFiles, status, diff, commitHistory, project] =
+    await Promise.all([
+      git.getBranchName(),
+      git.getChangedFiles(options),
+      git.getStatus(),
+      git.getStagedDiff(options),
+      git.getCommitHistory(20),
+      detectProjectType(),
+    ]);
 
   const fileContents = await readFileContents(changedFiles);
 
@@ -176,6 +192,6 @@ export function buildPrompt(context: GitContext): string {
     .replace("{{diff}}", context.diff || "None")
     .replace(
       "{{fileContents}}",
-      fileContents ? `**File contents:**\n${fileContents}` : ""
+      fileContents ? `**File contents:**\n${fileContents}` : "",
     );
 }

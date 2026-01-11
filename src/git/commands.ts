@@ -54,7 +54,7 @@ export async function getStagedDiff(options: GitOptions = {}): Promise<string> {
 }
 
 export async function getChangedFiles(
-  options: GitOptions = {}
+  options: GitOptions = {},
 ): Promise<string[]> {
   if (options.dryRun) {
     const [staged, unstaged, untracked] = await Promise.all([
@@ -100,7 +100,7 @@ export async function hasRemote(): Promise<boolean> {
 
 export async function commit(
   message: string,
-  options: GitOptions = {}
+  options: GitOptions = {},
 ): Promise<GitResult> {
   if (options.dryRun) {
     return { success: true };

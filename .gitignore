@@ -1,19 +1,69 @@
-# Environment variables
-.env
-
-# API keys
-*.key
-
-# OS files
-.DS_Store
-Thumbs.db
-
 # Dependencies
 node_modules/
 
 # Build output
 pushit
 dist/
+out/
+*.tsbuildinfo
 
 # Bun
 bun.lockb
+
+# Environment & secrets
+.env
+.env.*
+*.key
+*.pem
+*.p12
+credentials.json
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editor & IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# Debug
+*.pid
+*.seed
+*.pid.lock
+
+# Test & coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Cache
+.cache/
+.eslintcache
+.prettiercache
+*.tscache
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
