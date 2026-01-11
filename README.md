@@ -18,16 +18,16 @@ Generate conventional commit messages from your changes and optionally push to r
 
 ## Features
 
-| Feature                  | Description                                                                                      |
-| ------------------------ | ------------------------------------------------------------------------------------------------ |
+| Feature                  | Description                                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
 | **Interactive CLI**      | Spinners and styled prompts powered by [@clack/prompts](https://github.com/bombshell-dev/clack) |
-| **Auto-staging**         | Automatically stages all changes before analysis                                                 |
-| **Rich Context**         | Git diff, file contents (up to 500 lines), project detection                                     |
-| **Multi-language**       | Detects Node, Bun, Rust, Python, and Go projects                                                 |
-| **Smart Branch Parsing** | Extracts issue numbers from branch names                                                         |
-| **Style Matching**       | Uses recent commit history to match your style                                                   |
-| **Conventional Commits** | Generates standardized commit messages via OpenRouter API                                        |
-| **Smart Push**           | Shows "Commit and push" only when a remote exists                                                |
+| **Auto-staging**         | Automatically stages all changes before analysis                                                |
+| **Rich Context**         | Git diff, file contents (up to 500 lines), project detection                                    |
+| **Multi-language**       | Detects Node, Bun, Rust, Python, and Go projects                                                |
+| **Smart Branch Parsing** | Extracts issue numbers from branch names                                                        |
+| **Style Matching**       | Uses recent commit history to match your style                                                  |
+| **Conventional Commits** | Generates standardized commit messages via OpenRouter API                                       |
+| **Smart Push**           | Shows "Commit and push" only when a remote exists                                               |
 
 ## Installation
 
@@ -66,7 +66,6 @@ pushit --dry-run  # Test without committing
 ### Example Output
 
 ```
-┌  pushit - AI-powered git commits
 │
 ◇  Changes staged
 │
@@ -74,20 +73,14 @@ pushit --dry-run  # Test without committing
 │
 ◇  Message generated
 │
-◇  Commit message ────────────────────╮
-│                                     │
-│  refactor(cli): simplify ui output  │
-│                                     │
-├─────────────────────────────────────╯
+✦  docs: fix table formatting in readme
 │
 ◇  What would you like to do?
-│  Commit and push
+│  Commit and push to main
 │
-◆  Commit created successfully!
+◇  Commit created
 │
 ◇  Changes pushed successfully!
-│
-└  Done!
 ```
 
 ## Development
