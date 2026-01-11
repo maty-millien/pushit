@@ -76,7 +76,7 @@ async function main(): Promise<void> {
 
   const stageSpinner = p.spinner();
   stageSpinner.start("Staging changes...");
-  git.stageAll();
+  await git.stageAllAsync();
   stageSpinner.stop("Changes staged");
 
   const contextSpinner = p.spinner();
@@ -132,7 +132,7 @@ async function main(): Promise<void> {
 
     const commitSpinner = p.spinner();
     commitSpinner.start("Creating commit...");
-    const commitResult = git.commit(message);
+    const commitResult = await git.commitAsync(message);
     if (!commitResult.success) {
       commitSpinner.stop("Commit failed");
       p.cancel(`Failed to commit: ${commitResult.error}`);
@@ -143,8 +143,7 @@ async function main(): Promise<void> {
     if (action === "commit_push") {
       const pushSpinner = p.spinner();
       pushSpinner.start("Pushing to remote...");
-      if (dryRun) await new Promise((r) => setTimeout(r, 1500));
-      const pushResult = git.push();
+      const pushResult = await git.pushAsync();
       if (pushResult.success) {
         pushSpinner.stop("Changes pushed successfully!");
       } else {
