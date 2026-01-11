@@ -1,15 +1,5 @@
 import type { GitResult } from "./types";
 
-let dryRun = false;
-
-export function setDryRun(value: boolean): void {
-  dryRun = value;
-}
-
-export function isDryRun(): boolean {
-  return dryRun;
-}
-
 function git(args: string[]): {
   stdout: string;
   success: boolean;
@@ -37,32 +27,15 @@ export function hasChanges(): boolean {
 }
 
 export function stageAll(): void {
-  if (dryRun) return;
   git(["add", "-A"]);
 }
 
 export function getStagedDiff(): string {
-  if (dryRun) {
-    // In dry run, show all changes (staged + unstaged)
-    const staged = git(["diff", "--cached"]);
-    const unstaged = git(["diff"]);
-    return [staged.stdout, unstaged.stdout].filter(Boolean).join("\n");
-  }
   const result = git(["diff", "--cached"]);
   return result.stdout;
 }
 
 export function getChangedFiles(): string[] {
-  if (dryRun) {
-    // In dry run, show all changed files (staged + unstaged + untracked)
-    const staged = git(["diff", "--cached", "--name-only"]);
-    const unstaged = git(["diff", "--name-only"]);
-    const untracked = git(["ls-files", "--others", "--exclude-standard"]);
-    const allFiles = [staged.stdout, unstaged.stdout, untracked.stdout]
-      .filter(Boolean)
-      .join("\n");
-    return [...new Set(allFiles.split("\n").filter(Boolean))];
-  }
   const result = git(["diff", "--cached", "--name-only"]);
   if (!result.stdout) return [];
   return result.stdout.split("\n").filter(Boolean);
@@ -90,9 +63,6 @@ export function hasRemote(): boolean {
 }
 
 export function commit(message: string): GitResult {
-  if (dryRun) {
-    return { success: true };
-  }
   const result = git(["commit", "-m", message]);
   return {
     success: result.success,
@@ -101,9 +71,6 @@ export function commit(message: string): GitResult {
 }
 
 export function push(): GitResult {
-  if (dryRun) {
-    return { success: true };
-  }
   const result = git(["push"]);
   if (result.success) {
     return { success: true };
@@ -118,6 +85,5 @@ export function push(): GitResult {
 }
 
 export function unstage(): void {
-  if (dryRun) return;
   git(["reset"]);
 }

@@ -5,14 +5,6 @@ import { buildContext } from "./context";
 import * as git from "./git";
 
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const dryRun = args.includes("--dry-run");
-
-  if (dryRun) {
-    git.setDryRun(true);
-    p.intro("Dry run mode - no changes will be made");
-  }
-
   const configSpinner = p.spinner();
   configSpinner.start("Loading configuration...");
   const config = await loadConfig();
@@ -29,9 +21,9 @@ async function main(): Promise<void> {
   }
 
   const stageSpinner = p.spinner();
-  stageSpinner.start(dryRun ? "Checking changes..." : "Staging changes...");
+  stageSpinner.start("Staging changes...");
   git.stageAll();
-  stageSpinner.stop(dryRun ? "Changes detected" : "Changes staged");
+  stageSpinner.stop("Changes staged");
 
   const contextSpinner = p.spinner();
   contextSpinner.start("Analyzing changes...");
@@ -81,21 +73,21 @@ async function main(): Promise<void> {
     }
 
     const commitSpinner = p.spinner();
-    commitSpinner.start(dryRun ? "Simulating commit..." : "Creating commit...");
+    commitSpinner.start("Creating commit...");
     const commitResult = git.commit(message);
     if (!commitResult.success) {
       commitSpinner.stop("Commit failed");
       p.cancel(`Failed to commit: ${commitResult.error}`);
       process.exit(1);
     }
-    commitSpinner.stop(dryRun ? "Commit simulated" : "Commit created");
+    commitSpinner.stop("Commit created");
 
     if (action === "commit_push") {
       const pushSpinner = p.spinner();
-      pushSpinner.start(dryRun ? "Simulating push..." : "Pushing to remote...");
+      pushSpinner.start("Pushing to remote...");
       const pushResult = git.push();
       if (pushResult.success) {
-        pushSpinner.stop(dryRun ? "Push simulated" : "Changes pushed successfully!");
+        pushSpinner.stop("Changes pushed successfully!");
       } else {
         pushSpinner.stop("Failed to push (remote may not be configured)");
       }
@@ -104,7 +96,7 @@ async function main(): Promise<void> {
     break;
   }
 
-  p.outro(dryRun ? "Dry run complete - no changes were made" : "Done!");
+  p.outro("Done!");
 }
 
 main().catch((error) => {
