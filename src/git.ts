@@ -13,6 +13,27 @@ function git(args: string[]): {
   };
 }
 
+async function gitAsync(args: string[]): Promise<{
+  stdout: string;
+  success: boolean;
+  stderr: string;
+}> {
+  const proc = Bun.spawn(["git", ...args], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  const exitCode = await proc.exited;
+  return {
+    stdout: stdout.trim(),
+    stderr: stderr.trim(),
+    success: exitCode === 0,
+  };
+}
+
 export function isGitRepo(): boolean {
   const result = git(["rev-parse", "--is-inside-work-tree"]);
   return result.success && result.stdout === "true";
@@ -62,22 +83,22 @@ export function hasRemote(): boolean {
   return result.stdout.length > 0;
 }
 
-export function commit(message: string): GitResult {
-  const result = git(["commit", "-m", message]);
+export async function commit(message: string): Promise<GitResult> {
+  const result = await gitAsync(["commit", "-m", message]);
   return {
     success: result.success,
     error: result.success ? undefined : result.stderr,
   };
 }
 
-export function push(): GitResult {
-  const result = git(["push"]);
+export async function push(): Promise<GitResult> {
+  const result = await gitAsync(["push"]);
   if (result.success) {
     return { success: true };
   }
 
   const branch = getBranchName();
-  const upstreamResult = git(["push", "--set-upstream", "origin", branch]);
+  const upstreamResult = await gitAsync(["push", "--set-upstream", "origin", branch]);
   return {
     success: upstreamResult.success,
     error: upstreamResult.success ? undefined : upstreamResult.stderr,

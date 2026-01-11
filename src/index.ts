@@ -74,7 +74,7 @@ async function main(): Promise<void> {
 
     const commitSpinner = p.spinner();
     commitSpinner.start("Creating commit...");
-    const commitResult = git.commit(message);
+    const commitResult = await git.commit(message);
     if (!commitResult.success) {
       commitSpinner.stop("Commit failed");
       p.cancel(`Failed to commit: ${commitResult.error}`);
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     if (action === "commit_push") {
       const pushSpinner = p.spinner();
       pushSpinner.start("Pushing to remote...");
-      const pushResult = git.push();
+      const pushResult = await git.push();
       if (pushResult.success) {
         pushSpinner.stop("Changes pushed successfully!");
       } else {
