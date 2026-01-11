@@ -1,5 +1,11 @@
 import type { GitResult } from "./types";
 
+let dryRun = false;
+
+export function setDryRun(value: boolean): void {
+  dryRun = value;
+}
+
 function git(args: string[]): {
   stdout: string;
   success: boolean;
@@ -10,27 +16,6 @@ function git(args: string[]): {
     stdout: new TextDecoder().decode(result.stdout).trim(),
     stderr: new TextDecoder().decode(result.stderr).trim(),
     success: result.exitCode === 0,
-  };
-}
-
-async function gitAsync(args: string[]): Promise<{
-  stdout: string;
-  success: boolean;
-  stderr: string;
-}> {
-  const proc = Bun.spawn(["git", ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  const exitCode = await proc.exited;
-  return {
-    stdout: stdout.trim(),
-    stderr: stderr.trim(),
-    success: exitCode === 0,
   };
 }
 
@@ -48,15 +33,30 @@ export function hasChanges(): boolean {
 }
 
 export function stageAll(): void {
+  if (dryRun) return;
   git(["add", "-A"]);
 }
 
 export function getStagedDiff(): string {
+  if (dryRun) {
+    const staged = git(["diff", "--cached"]);
+    const unstaged = git(["diff"]);
+    return [staged.stdout, unstaged.stdout].filter(Boolean).join("\n");
+  }
   const result = git(["diff", "--cached"]);
   return result.stdout;
 }
 
 export function getChangedFiles(): string[] {
+  if (dryRun) {
+    const staged = git(["diff", "--cached", "--name-only"]);
+    const unstaged = git(["diff", "--name-only"]);
+    const untracked = git(["ls-files", "--others", "--exclude-standard"]);
+    const allFiles = [staged.stdout, unstaged.stdout, untracked.stdout]
+      .filter(Boolean)
+      .join("\n");
+    return [...new Set(allFiles.split("\n").filter(Boolean))];
+  }
   const result = git(["diff", "--cached", "--name-only"]);
   if (!result.stdout) return [];
   return result.stdout.split("\n").filter(Boolean);
@@ -83,22 +83,28 @@ export function hasRemote(): boolean {
   return result.stdout.length > 0;
 }
 
-export async function commit(message: string): Promise<GitResult> {
-  const result = await gitAsync(["commit", "-m", message]);
+export function commit(message: string): GitResult {
+  if (dryRun) {
+    return { success: true };
+  }
+  const result = git(["commit", "-m", message]);
   return {
     success: result.success,
     error: result.success ? undefined : result.stderr,
   };
 }
 
-export async function push(): Promise<GitResult> {
-  const result = await gitAsync(["push"]);
+export function push(): GitResult {
+  if (dryRun) {
+    return { success: true };
+  }
+  const result = git(["push"]);
   if (result.success) {
     return { success: true };
   }
 
   const branch = getBranchName();
-  const upstreamResult = await gitAsync(["push", "--set-upstream", "origin", branch]);
+  const upstreamResult = git(["push", "--set-upstream", "origin", branch]);
   return {
     success: upstreamResult.success,
     error: upstreamResult.success ? undefined : upstreamResult.stderr,
@@ -106,5 +112,6 @@ export async function push(): Promise<GitResult> {
 }
 
 export function unstage(): void {
+  if (dryRun) return;
   git(["reset"]);
 }

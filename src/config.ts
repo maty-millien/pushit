@@ -4,7 +4,7 @@ import { join } from "path";
 import type { Config } from "./types";
 
 export const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-export const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-09-2025";
+export const OPENROUTER_MODEL = "google/gemini-2.5-flash-preview-09-2025";
 export const CONFIG_PATH = join(homedir(), ".config", "pushit", ".env");
 
 export const MAX_FILE_SIZE = 50 * 1024; // 50 KB
@@ -78,7 +78,7 @@ export async function loadConfig(): Promise<Config> {
 
   return {
     apiKey,
-    model: process.env.OPENROUTER_MODEL || fileEnv.OPENROUTER_MODEL || DEFAULT_MODEL,
+    model: OPENROUTER_MODEL,
     apiUrl: API_URL,
   };
 }
