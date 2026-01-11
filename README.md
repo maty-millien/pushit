@@ -18,16 +18,16 @@ Generate conventional commit messages from your changes and optionally push to r
 
 ## Features
 
-| Feature                  | Description                                                                                     |
-| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| Feature                  | Description                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------ |
 | **Interactive CLI**      | Spinners and styled prompts powered by [@clack/prompts](https://github.com/bombshell-dev/clack) |
-| **Auto-staging**         | Automatically stages all changes before analysis                                                |
-| **Rich Context**         | Git diff, file contents (up to 500 lines), project detection                                    |
-| **Multi-language**       | Detects Node, Bun, Rust, Python, and Go projects                                                |
-| **Smart Branch Parsing** | Extracts issue numbers from branch names                                                        |
-| **Style Matching**       | Uses recent commit history to match your style                                                  |
-| **Conventional Commits** | Generates standardized commit messages via OpenRouter API                                       |
-| **Smart Push**           | Shows "Commit and push" only when a remote exists                                               |
+| **Auto-staging**         | Automatically stages all changes before analysis                                                 |
+| **Rich Context**         | Git diff, file contents (up to 500 lines), project detection                                     |
+| **Multi-language**       | Detects Node, Bun, Rust, Python, and Go projects                                                 |
+| **Smart Branch Parsing** | Extracts issue numbers from branch names                                                         |
+| **Style Matching**       | Uses recent commit history to match your style                                                   |
+| **Conventional Commits** | Generates standardized commit messages via OpenRouter API                                        |
+| **Smart Push**           | Shows "Commit and push" only when a remote exists                                                |
 
 ## Installation
 
@@ -54,10 +54,13 @@ cp .env.example .env
 
 Edit `.env` and replace `your-api-key-here` with your actual API key. You can also change the model if desired.
 
+The install script copies `.env` to `~/.config/pushit/.env` where the binary reads it from.
+
 ## Usage
 
 ```bash
-pushit
+pushit            # Normal mode
+pushit --dry-run  # Test without committing
 ```
 
 ### Example Output
@@ -94,6 +97,7 @@ pushit
 | `bun run dev`       | Run in development mode           |
 | `bun run lint`      | Lint with ESLint                  |
 | `bun run typecheck` | Type check with TypeScript        |
+| `bun run format`    | Format with Prettier              |
 | `bun run build`     | Build native executable           |
 | `bun run install`   | Build and install to ~/.local/bin |
 
