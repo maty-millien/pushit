@@ -2,8 +2,9 @@ import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { generateCommitMessage } from "./api";
 import { loadConfig } from "./config";
-import { buildContext } from "./context";
-import * as git from "./git";
+import { buildContext } from "./git/context";
+import * as git from "./git/commands";
+import type { GitOptions } from "./types";
 
 const TYPE_COLORS: Record<string, (s: string) => string> = {
   feat: pc.green,
@@ -58,33 +59,31 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
 
-  if (dryRun) {
-    git.setDryRun(true);
-  }
+  const gitOptions: GitOptions = { dryRun };
 
   const config = await loadConfig();
 
-  if (!git.isGitRepo()) {
+  if (!(await git.isGitRepo())) {
     p.cancel("Not a git repository");
     process.exit(1);
   }
 
-  if (!git.hasChanges()) {
+  if (!(await git.hasChanges())) {
     p.outro("No changes to commit");
     process.exit(0);
   }
 
   const stageSpinner = p.spinner();
   stageSpinner.start("Staging changes...");
-  await git.stageAllAsync();
+  await git.stageAll(gitOptions);
   stageSpinner.stop("Changes staged");
 
   const contextSpinner = p.spinner();
   contextSpinner.start("Analyzing changes...");
-  const context = await buildContext();
+  const context = await buildContext(gitOptions);
   contextSpinner.stop("Analysis complete");
 
-  const remoteExists = git.hasRemote();
+  const remoteExists = await git.hasRemote();
 
   while (true) {
     const generateSpinner = p.spinner();
@@ -97,7 +96,7 @@ async function main(): Promise<void> {
     } catch (error) {
       generateSpinner.stop("Failed to generate message");
       p.cancel(error instanceof Error ? error.message : "Unknown error");
-      git.unstage();
+      await git.unstage(gitOptions);
       process.exit(1);
     }
 
@@ -121,7 +120,7 @@ async function main(): Promise<void> {
     });
 
     if (p.isCancel(action) || action === "cancel") {
-      git.unstage();
+      await git.unstage(gitOptions);
       p.cancel("Commit cancelled");
       process.exit(0);
     }
@@ -132,7 +131,7 @@ async function main(): Promise<void> {
 
     const commitSpinner = p.spinner();
     commitSpinner.start("Creating commit...");
-    const commitResult = await git.commitAsync(message);
+    const commitResult = await git.commit(message, gitOptions);
     if (!commitResult.success) {
       commitSpinner.stop("Commit failed");
       p.cancel(`Failed to commit: ${commitResult.error}`);
@@ -143,7 +142,7 @@ async function main(): Promise<void> {
     if (action === "commit_push") {
       const pushSpinner = p.spinner();
       pushSpinner.start("Pushing to remote...");
-      const pushResult = await git.pushAsync();
+      const pushResult = await git.push(gitOptions);
       if (pushResult.success) {
         pushSpinner.stop("Changes pushed successfully!");
       } else {

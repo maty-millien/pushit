@@ -1,4 +1,4 @@
-import { buildPrompt } from "./context";
+import { buildPrompt } from "./git/context";
 import type { Config, GitContext } from "./types";
 
 export async function generateCommitMessage(
@@ -54,7 +54,9 @@ export async function generateCommitMessage(
         if (content) {
           message += content;
         }
-      } catch {}
+      } catch {
+        // Ignore malformed SSE chunks - expected during streaming
+      }
     }
   }
 

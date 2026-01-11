@@ -1,8 +1,8 @@
-import * as path from "path";
-import { BINARY_EXTENSIONS, MAX_FILE_SIZE, MAX_LINES_PER_FILE } from "./config";
-import * as git from "./git";
-import type { GitContext, ProjectInfo } from "./types";
-import promptTemplate from "./PROMPT.md" with { type: "text" };
+import { join, extname } from "path";
+import { BINARY_EXTENSIONS, MAX_FILE_SIZE, MAX_LINES_PER_FILE } from "../config";
+import * as git from "./commands";
+import type { GitContext, ProjectInfo, GitOptions } from "../types";
+import promptTemplate from "../prompt.md" with { type: "text" };
 
 export function extractIssueFromBranch(branch: string): string | undefined {
   const patterns = [
@@ -23,7 +23,7 @@ export function extractIssueFromBranch(branch: string): string | undefined {
 export async function detectProjectType(): Promise<ProjectInfo> {
   const cwd = process.cwd();
 
-  const bunLockPath = path.join(cwd, "bun.lockb");
+  const bunLockPath = join(cwd, "bun.lockb");
   if (await fileExists(bunLockPath)) {
     const pkg = await tryReadPackageJson(cwd);
     return { type: "bun", name: pkg?.name, version: pkg?.version };
@@ -33,7 +33,7 @@ export async function detectProjectType(): Promise<ProjectInfo> {
   if (pkg) {
     return { type: "node", name: pkg.name, version: pkg.version };
   }
-  const cargoPath = path.join(cwd, "Cargo.toml");
+  const cargoPath = join(cwd, "Cargo.toml");
   if (await fileExists(cargoPath)) {
     const content = await safeReadFile(cargoPath);
     if (content) {
@@ -47,13 +47,13 @@ export async function detectProjectType(): Promise<ProjectInfo> {
     }
   }
 
-  const pyprojectPath = path.join(cwd, "pyproject.toml");
-  const setupPath = path.join(cwd, "setup.py");
+  const pyprojectPath = join(cwd, "pyproject.toml");
+  const setupPath = join(cwd, "setup.py");
   if ((await fileExists(pyprojectPath)) || (await fileExists(setupPath))) {
     return { type: "python" };
   }
 
-  const goModPath = path.join(cwd, "go.mod");
+  const goModPath = join(cwd, "go.mod");
   if (await fileExists(goModPath)) {
     const content = await safeReadFile(goModPath);
     if (content) {
@@ -69,6 +69,7 @@ async function fileExists(filePath: string): Promise<boolean> {
   try {
     return await Bun.file(filePath).exists();
   } catch {
+    // Treat any error as "does not exist"
     return false;
   }
 }
@@ -77,6 +78,7 @@ async function safeReadFile(filePath: string): Promise<string | null> {
   try {
     return await Bun.file(filePath).text();
   } catch {
+    // Return null if file can't be read
     return null;
   }
 }
@@ -84,18 +86,19 @@ async function safeReadFile(filePath: string): Promise<string | null> {
 async function tryReadPackageJson(
   cwd: string
 ): Promise<{ name?: string; version?: string } | null> {
-  const pkgPath = path.join(cwd, "package.json");
+  const pkgPath = join(cwd, "package.json");
   if (!(await fileExists(pkgPath))) return null;
 
   try {
     return await Bun.file(pkgPath).json();
   } catch {
+    // Return null if JSON parsing fails
     return null;
   }
 }
 
 function isBinaryFile(filePath: string): boolean {
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = extname(filePath).toLowerCase();
   return BINARY_EXTENSIONS.has(ext);
 }
 
@@ -109,7 +112,7 @@ export async function readFileContents(
     if (isBinaryFile(file)) continue;
 
     try {
-      const filePath = path.join(cwd, file);
+      const filePath = join(cwd, file);
       const bunFile = Bun.file(filePath);
 
       const size = bunFile.size;
@@ -126,29 +129,34 @@ export async function readFileContents(
       } else {
         contents.set(file, text);
       }
-    } catch {}
+    } catch {
+      // Skip files that can't be read
+    }
   }
 
   return contents;
 }
 
-export async function buildContext(): Promise<GitContext> {
-  const branch = git.getBranchName();
-  const changedFiles = git.getChangedFiles();
-
-  const [project, fileContents] = await Promise.all([
+export async function buildContext(options: GitOptions = {}): Promise<GitContext> {
+  const [branch, changedFiles, status, diff, commitHistory, project] = await Promise.all([
+    git.getBranchName(),
+    git.getChangedFiles(options),
+    git.getStatus(),
+    git.getStagedDiff(options),
+    git.getCommitHistory(20),
     detectProjectType(),
-    readFileContents(changedFiles),
   ]);
+
+  const fileContents = await readFileContents(changedFiles);
 
   return {
     branch,
     linkedIssue: extractIssueFromBranch(branch),
-    diff: git.getStagedDiff(),
-    status: git.getStatus(),
+    diff,
+    status,
     changedFiles,
     fileContents,
-    commitHistory: git.getCommitHistory(20),
+    commitHistory,
     project,
   };
 }

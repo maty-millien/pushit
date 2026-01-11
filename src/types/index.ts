@@ -25,3 +25,7 @@ export interface GitResult {
   success: boolean;
   error?: string;
 }
+
+export interface GitOptions {
+  dryRun?: boolean;
+}
