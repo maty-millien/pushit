@@ -1,4 +1,10 @@
-import type { FileStatus, FileStatusType, GitOptions, GitResult } from "../types";
+import type {
+  FileDiffStats,
+  FileStatus,
+  FileStatusType,
+  GitOptions,
+  GitResult,
+} from "../types";
 
 async function git(args: string[]): Promise<{
   stdout: string;
@@ -183,6 +189,38 @@ export function parseStatus(statusOutput: string): FileStatus[] {
       return {
         path: pathPart,
         status: STATUS_MAP[statusChar] || "modified",
+      };
+    });
+}
+
+export async function getDiffStats(
+  options: GitOptions = {},
+): Promise<FileDiffStats[]> {
+  if (options.dryRun) {
+    const [staged, unstaged] = await Promise.all([
+      git(["diff", "--cached", "--numstat"]),
+      git(["diff", "--numstat"]),
+    ]);
+    const combined = [staged.stdout, unstaged.stdout].filter(Boolean).join("\n");
+    return parseNumstat(combined);
+  }
+
+  const result = await git(["diff", "--cached", "--numstat"]);
+  return parseNumstat(result.stdout);
+}
+
+function parseNumstat(output: string): FileDiffStats[] {
+  if (!output.trim()) return [];
+
+  return output
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [insertions, deletions, ...pathParts] = line.split("\t");
+      return {
+        path: pathParts.join("\t"),
+        insertions: insertions === "-" ? 0 : parseInt(insertions, 10),
+        deletions: deletions === "-" ? 0 : parseInt(deletions, 10),
       };
     });
 }

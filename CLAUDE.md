@@ -42,6 +42,8 @@ src/
 - Binary files are skipped based on extension (BINARY_EXTENSIONS set in config.ts)
 - File contents limited to 50KB and 500 lines per file
 - Supports `--dry-run` flag for testing without committing
+- File status display parses `git status --short` via `parseStatus()` in commands.ts
+- Diff stats use `git diff --numstat` via `getDiffStats()` for per-file insertions/deletions
 
 ## Configuration
 

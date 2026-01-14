@@ -21,6 +21,7 @@ Generate conventional commit messages from your changes and optionally push to r
 | Feature                  | Description                                                                                     |
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
 | **Interactive CLI**      | Spinners and styled prompts powered by [@clack/prompts](https://github.com/bombshell-dev/clack) |
+| **File Status Preview**  | Shows files with status and colored diff stats (+insertions / -deletions)                       |
 | **Auto-staging**         | Automatically stages all changes before analysis                                                |
 | **Rich Context**         | Git diff, file contents (up to 500 lines), project detection                                    |
 | **Multi-language**       | Detects Node, Bun, Rust, Python, and Go projects                                                |
@@ -71,9 +72,14 @@ pushit --dry-run  # Test without committing
 │
 ◇  Analysis complete
 │
+│  Changes
+│    M  src/index.ts           +45 -12
+│    A  src/utils/helper.ts    +128
+│    D  src/old-file.ts             -89
+│
 ◇  Message generated
 │
-✦  docs: fix table formatting in readme
+✦  feat(utils): add helper module and refactor index
 │
 ◇  What would you like to do?
 │  Commit and push to main

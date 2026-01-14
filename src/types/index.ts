@@ -39,6 +39,12 @@ export interface FileStatus {
   oldPath?: string;
 }
 
+export interface FileDiffStats {
+  path: string;
+  insertions: number;
+  deletions: number;
+}
+
 export interface GitOptions {
   dryRun?: boolean;
 }

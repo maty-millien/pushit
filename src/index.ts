@@ -4,7 +4,7 @@ import { generateCommitMessage } from "./api";
 import { loadConfig } from "./config";
 import * as git from "./git/commands";
 import { buildContext } from "./git/context";
-import type { FileStatus, GitOptions } from "./types";
+import type { FileDiffStats, FileStatus, GitOptions } from "./types";
 
 const TYPE_COLORS: Record<string, (s: string) => string> = {
   feat: pc.green,
@@ -76,7 +76,28 @@ function formatPath(filePath: string): string {
   return pc.dim(dir) + filename;
 }
 
-function displayFileStatuses(statuses: FileStatus[]): void {
+function formatNumber(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+function formatDiffStats(stats: FileDiffStats | undefined): string {
+  if (!stats) return "";
+
+  const parts: string[] = [];
+  if (stats.insertions > 0) {
+    parts.push(pc.green(`+${formatNumber(stats.insertions)}`));
+  }
+  if (stats.deletions > 0) {
+    parts.push(pc.red(`-${formatNumber(stats.deletions)}`));
+  }
+
+  return parts.length > 0 ? ` ${parts.join(" ")}` : "";
+}
+
+function displayFileStatuses(
+  statuses: FileStatus[],
+  diffStats: Map<string, FileDiffStats>,
+): void {
   if (statuses.length === 0) return;
 
   console.log(`${pc.gray("│")}`);
@@ -88,14 +109,16 @@ function displayFileStatuses(statuses: FileStatus[]): void {
       color: pc.gray,
     };
     const statusBadge = color(label);
+    const stats = diffStats.get(file.path);
+    const statsDisplay = formatDiffStats(stats);
 
     if (file.oldPath) {
       console.log(
-        `${pc.gray("│")}    ${statusBadge}  ${pc.dim(file.oldPath)} ${pc.dim("→")} ${formatPath(file.path)}`
+        `${pc.gray("│")}    ${statusBadge}  ${pc.dim(file.oldPath)} ${pc.dim("→")} ${formatPath(file.path)}${statsDisplay}`,
       );
     } else {
       console.log(
-        `${pc.gray("│")}    ${statusBadge}  ${formatPath(file.path)}`
+        `${pc.gray("│")}    ${statusBadge}  ${formatPath(file.path)}${statsDisplay}`,
       );
     }
   }
@@ -138,8 +161,12 @@ async function main(): Promise<void> {
   ]);
   contextSpinner.stop("Analysis complete");
 
-  const fileStatuses = git.parseStatus(context.status);
-  displayFileStatuses(fileStatuses);
+  const [fileStatuses, diffStatsArray] = await Promise.all([
+    Promise.resolve(git.parseStatus(context.status)),
+    git.getDiffStats(gitOptions),
+  ]);
+  const diffStats = new Map(diffStatsArray.map((s) => [s.path, s]));
+  displayFileStatuses(fileStatuses, diffStats);
 
   while (true) {
     const generateSpinner = p.spinner();
