@@ -1,4 +1,4 @@
-import type { GitOptions, GitResult } from "../types";
+import type { FileStatus, FileStatusType, GitOptions, GitResult } from "../types";
 
 async function git(args: string[]): Promise<{
   stdout: string;
@@ -137,4 +137,52 @@ export async function push(options: GitOptions = {}): Promise<GitResult> {
 export async function unstage(options: GitOptions = {}): Promise<void> {
   if (options.dryRun) return;
   await git(["reset"]);
+}
+
+const STATUS_MAP: Record<string, FileStatusType> = {
+  A: "added",
+  M: "modified",
+  D: "deleted",
+  R: "renamed",
+  C: "copied",
+};
+
+export function parseStatus(statusOutput: string): FileStatus[] {
+  if (!statusOutput.trim()) return [];
+
+  return statusOutput
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const indexStatus = line[0];
+      const worktreeStatus = line[1];
+      // Path starts after the 2 status chars; trim any whitespace
+      const pathPart = line.slice(2).trimStart();
+
+      // Use index status if staged, otherwise worktree status
+      const statusChar =
+        indexStatus !== " " && indexStatus !== "?" ? indexStatus : worktreeStatus;
+
+      // Handle untracked files (shown as added when staged)
+      if (indexStatus === "?") {
+        return { path: pathPart, status: "added" as FileStatusType };
+      }
+
+      // Handle renames: "R  old.ts -> new.ts"
+      if (statusChar === "R" || statusChar === "C") {
+        const arrowIndex = pathPart.indexOf(" -> ");
+        if (arrowIndex !== -1) {
+          return {
+            path: pathPart.slice(arrowIndex + 4),
+            oldPath: pathPart.slice(0, arrowIndex),
+            status: STATUS_MAP[statusChar],
+          };
+        }
+      }
+
+      return {
+        path: pathPart,
+        status: STATUS_MAP[statusChar] || "modified",
+      };
+    });
 }

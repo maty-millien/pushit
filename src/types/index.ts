@@ -26,6 +26,19 @@ export interface GitResult {
   error?: string;
 }
 
+export type FileStatusType =
+  | "added"
+  | "modified"
+  | "deleted"
+  | "renamed"
+  | "copied";
+
+export interface FileStatus {
+  path: string;
+  status: FileStatusType;
+  oldPath?: string;
+}
+
 export interface GitOptions {
   dryRun?: boolean;
 }

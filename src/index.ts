@@ -4,7 +4,7 @@ import { generateCommitMessage } from "./api";
 import { loadConfig } from "./config";
 import * as git from "./git/commands";
 import { buildContext } from "./git/context";
-import type { GitOptions } from "./types";
+import type { FileStatus, GitOptions } from "./types";
 
 const TYPE_COLORS: Record<string, (s: string) => string> = {
   feat: pc.green,
@@ -55,6 +55,52 @@ function displayCommitMessage(message: string): void {
   console.log(`${pc.gray("│")}\n${colorFn("✦")}  ${formatted}`);
 }
 
+const STATUS_DISPLAY: Record<
+  string,
+  { label: string; color: (s: string) => string }
+> = {
+  added: { label: "A", color: pc.green },
+  modified: { label: "M", color: pc.yellow },
+  deleted: { label: "D", color: pc.red },
+  renamed: { label: "R", color: pc.cyan },
+  copied: { label: "C", color: pc.cyan },
+};
+
+function formatPath(filePath: string): string {
+  const lastSlash = filePath.lastIndexOf("/");
+  if (lastSlash === -1) {
+    return filePath;
+  }
+  const dir = filePath.slice(0, lastSlash + 1);
+  const filename = filePath.slice(lastSlash + 1);
+  return pc.dim(dir) + filename;
+}
+
+function displayFileStatuses(statuses: FileStatus[]): void {
+  if (statuses.length === 0) return;
+
+  console.log(`${pc.gray("│")}`);
+  console.log(`${pc.gray("│")}  ${pc.bold("Changes")}`);
+
+  for (const file of statuses) {
+    const { label, color } = STATUS_DISPLAY[file.status] || {
+      label: "?",
+      color: pc.gray,
+    };
+    const statusBadge = color(label);
+
+    if (file.oldPath) {
+      console.log(
+        `${pc.gray("│")}    ${statusBadge}  ${pc.dim(file.oldPath)} ${pc.dim("→")} ${formatPath(file.path)}`
+      );
+    } else {
+      console.log(
+        `${pc.gray("│")}    ${statusBadge}  ${formatPath(file.path)}`
+      );
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
@@ -91,6 +137,9 @@ async function main(): Promise<void> {
     git.hasRemote(),
   ]);
   contextSpinner.stop("Analysis complete");
+
+  const fileStatuses = git.parseStatus(context.status);
+  displayFileStatuses(fileStatuses);
 
   while (true) {
     const generateSpinner = p.spinner();
