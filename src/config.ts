@@ -4,7 +4,7 @@ import { join } from "path";
 import type { Config } from "./types";
 
 export const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-export const OPENROUTER_MODEL = "google/gemini-2.5-flash-preview-09-2025";
+export const OPENROUTER_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";
 export const CONFIG_PATH = join(homedir(), ".config", "pushit", ".env");
 
 export const MAX_FILE_SIZE = 50 * 1024; // 50 KB
@@ -76,7 +76,7 @@ export async function loadConfig(): Promise<Config> {
 
   if (!apiKey) {
     p.cancel(
-      `OPENROUTER_API_KEY not set. Add it to ${CONFIG_PATH} or export it.`,
+      `OPENROUTER_API_KEY not set. Add it to ${CONFIG_PATH} or export it.`
     );
     process.exit(1);
   }

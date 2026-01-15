@@ -3,17 +3,15 @@ import type { Config, GitContext } from "./types";
 
 export async function generateCommitMessage(
   context: GitContext,
-  config: Config,
+  config: Config
 ): Promise<string> {
   const prompt = buildPrompt(context);
 
   const response = await fetch(config.apiUrl, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
       Authorization: `Bearer ${config.apiKey}`,
-      "HTTP-Referer": "https://github.com/pushit",
-      "X-Title": "pushit",
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       model: config.model,

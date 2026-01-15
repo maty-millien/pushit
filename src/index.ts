@@ -96,7 +96,7 @@ function formatDiffStats(stats: FileDiffStats | undefined): string {
 
 function displayFileStatuses(
   statuses: FileStatus[],
-  diffStats: Map<string, FileDiffStats>,
+  diffStats: Map<string, FileDiffStats>
 ): void {
   if (statuses.length === 0) return;
 
@@ -114,11 +114,11 @@ function displayFileStatuses(
 
     if (file.oldPath) {
       console.log(
-        `${pc.gray("│")}    ${statusBadge}  ${pc.dim(file.oldPath)} ${pc.dim("→")} ${formatPath(file.path)}${statsDisplay}`,
+        `${pc.gray("│")}    ${statusBadge}  ${pc.dim(file.oldPath)} ${pc.dim("→")} ${formatPath(file.path)}${statsDisplay}`
       );
     } else {
       console.log(
-        `${pc.gray("│")}    ${statusBadge}  ${formatPath(file.path)}${statsDisplay}`,
+        `${pc.gray("│")}    ${statusBadge}  ${formatPath(file.path)}${statsDisplay}`
       );
     }
   }
