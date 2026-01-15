@@ -3,7 +3,7 @@ import type { Config, GitContext } from "./types";
 
 export async function generateCommitMessage(
   context: GitContext,
-  config: Config,
+  config: Config
 ): Promise<string> {
   const prompt = buildPrompt(context);
 

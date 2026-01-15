@@ -76,7 +76,7 @@ export async function loadConfig(): Promise<Config> {
 
   if (!apiKey) {
     p.cancel(
-      `OPENROUTER_API_KEY not set. Add it to ${CONFIG_PATH} or export it.`,
+      `OPENROUTER_API_KEY not set. Add it to ${CONFIG_PATH} or export it.`
     );
     process.exit(1);
   }
