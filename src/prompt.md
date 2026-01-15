@@ -45,8 +45,6 @@ Output ONLY the commit message - no explanations. But let your reasoning inform 
 
 ## Context
 
-**Project:** {{projectInfo}}
-
 **Recent commits (for style):**
 {{commitHistory}}
 

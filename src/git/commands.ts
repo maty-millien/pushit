@@ -167,7 +167,9 @@ export function parseStatus(statusOutput: string): FileStatus[] {
 
       // Use index status if staged, otherwise worktree status
       const statusChar =
-        indexStatus !== " " && indexStatus !== "?" ? indexStatus : worktreeStatus;
+        indexStatus !== " " && indexStatus !== "?"
+          ? indexStatus
+          : worktreeStatus;
 
       // Handle untracked files (shown as added when staged)
       if (indexStatus === "?") {
@@ -201,7 +203,9 @@ export async function getDiffStats(
       git(["diff", "--cached", "--numstat"]),
       git(["diff", "--numstat"]),
     ]);
-    const combined = [staged.stdout, unstaged.stdout].filter(Boolean).join("\n");
+    const combined = [staged.stdout, unstaged.stdout]
+      .filter(Boolean)
+      .join("\n");
     return parseNumstat(combined);
   }
 

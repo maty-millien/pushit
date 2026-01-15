@@ -5,7 +5,7 @@ import {
   MAX_LINES_PER_FILE,
 } from "../config";
 import promptTemplate from "../prompt.md" with { type: "text" };
-import type { GitContext, GitOptions, ProjectInfo } from "../types";
+import type { GitContext, GitOptions } from "../types";
 import * as git from "./commands";
 
 export function extractIssueFromBranch(branch: string): string | undefined {
@@ -22,85 +22,6 @@ export function extractIssueFromBranch(branch: string): string | undefined {
     if (match) return match[1];
   }
   return undefined;
-}
-
-export async function detectProjectType(): Promise<ProjectInfo> {
-  const cwd = process.cwd();
-
-  // Check all project indicators in parallel for faster detection
-  const [
-    bunLockExists,
-    pkg,
-    cargoContent,
-    pyprojectExists,
-    setupExists,
-    goModContent,
-  ] = await Promise.all([
-    fileExists(join(cwd, "bun.lockb")),
-    tryReadPackageJson(cwd),
-    safeReadFile(join(cwd, "Cargo.toml")),
-    fileExists(join(cwd, "pyproject.toml")),
-    fileExists(join(cwd, "setup.py")),
-    safeReadFile(join(cwd, "go.mod")),
-  ]);
-
-  // Priority-based resolution
-  if (bunLockExists) {
-    return { type: "bun", name: pkg?.name, version: pkg?.version };
-  }
-
-  if (pkg) {
-    return { type: "node", name: pkg.name, version: pkg.version };
-  }
-
-  if (cargoContent) {
-    const nameMatch = cargoContent.match(/name\s*=\s*"([^"]+)"/);
-    const versionMatch = cargoContent.match(/version\s*=\s*"([^"]+)"/);
-    return { type: "rust", name: nameMatch?.[1], version: versionMatch?.[1] };
-  }
-
-  if (pyprojectExists || setupExists) {
-    return { type: "python" };
-  }
-
-  if (goModContent) {
-    const moduleMatch = goModContent.match(/module\s+(\S+)/);
-    return { type: "go", name: moduleMatch?.[1] };
-  }
-
-  return { type: "unknown" };
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    return await Bun.file(filePath).exists();
-  } catch {
-    // Treat any error as "does not exist"
-    return false;
-  }
-}
-
-async function safeReadFile(filePath: string): Promise<string | null> {
-  try {
-    return await Bun.file(filePath).text();
-  } catch {
-    // Return null if file can't be read
-    return null;
-  }
-}
-
-async function tryReadPackageJson(
-  cwd: string,
-): Promise<{ name?: string; version?: string } | null> {
-  const pkgPath = join(cwd, "package.json");
-  if (!(await fileExists(pkgPath))) return null;
-
-  try {
-    return await Bun.file(pkgPath).json();
-  } catch {
-    // Return null if JSON parsing fails
-    return null;
-  }
 }
 
 function isBinaryFile(filePath: string): boolean {
@@ -145,15 +66,15 @@ export async function readFileContents(
 export async function buildContext(
   options: GitOptions = {},
 ): Promise<GitContext> {
-  const [branch, changedFiles, status, diff, commitHistory, project] =
-    await Promise.all([
+  const [branch, changedFiles, status, diff, commitHistory] = await Promise.all(
+    [
       git.getBranchName(),
       git.getChangedFiles(options),
       git.getStatus(),
       git.getStagedDiff(options),
       git.getCommitHistory(20),
-      detectProjectType(),
-    ]);
+    ],
+  );
 
   const fileContents = await readFileContents(changedFiles);
 
@@ -165,27 +86,16 @@ export async function buildContext(
     changedFiles,
     fileContents,
     commitHistory,
-    project,
   };
 }
 
 export function buildPrompt(context: GitContext): string {
-  const projectInfo = [
-    `Type: ${context.project.type}`,
-    context.project.name ? `Name: ${context.project.name}` : null,
-    context.project.version ? `Version: ${context.project.version}` : null,
-    context.linkedIssue ? `Related Issue: #${context.linkedIssue}` : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
-
   const fileContents = Array.from(context.fileContents.entries())
     .map(([file, content]) => `--- ${file} ---\n${content}`)
     .join("\n\n");
 
   return promptTemplate
     .replace("{{branch}}", context.branch)
-    .replace("{{projectInfo}}", projectInfo)
     .replace("{{commitHistory}}", context.commitHistory.join("\n") || "None")
     .replace("{{changedFiles}}", context.changedFiles.join("\n") || "None")
     .replace("{{status}}", context.status || "None")

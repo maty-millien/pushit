@@ -4,12 +4,6 @@ export interface Config {
   apiUrl: string;
 }
 
-export interface ProjectInfo {
-  type: "node" | "bun" | "rust" | "python" | "go" | "unknown";
-  name?: string;
-  version?: string;
-}
-
 export interface GitContext {
   branch: string;
   linkedIssue?: string;
@@ -18,7 +12,6 @@ export interface GitContext {
   changedFiles: string[];
   fileContents: Map<string, string>;
   commitHistory: string[];
-  project: ProjectInfo;
 }
 
 export interface GitResult {
