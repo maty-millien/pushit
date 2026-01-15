@@ -30,7 +30,7 @@ src/
 │   └── text.d.ts     # Module declaration for .md imports
 └── git/
     ├── commands.ts   # Async git command wrappers via Bun.spawn
-    └── context.ts    # Project detection and context building
+    └── context.ts    # Git context building for LLM prompt
 ```
 
 ## Key Patterns
@@ -38,7 +38,6 @@ src/
 - Uses Bun runtime and Bun-specific APIs (`Bun.spawn`, `Bun.file`)
 - Async operations with parallel execution via `Promise.all()`
 - Prompt template uses `{{placeholder}}` syntax, replaced in `buildPrompt()`
-- Project type detection checks for bun.lockb, package.json, Cargo.toml, pyproject.toml, go.mod
 - Binary files are skipped based on extension (BINARY_EXTENSIONS set in config.ts)
 - File contents limited to 50KB and 500 lines per file
 - Supports `--dry-run` flag for testing without committing

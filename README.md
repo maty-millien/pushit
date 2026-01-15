@@ -23,8 +23,7 @@ Generate conventional commit messages from your changes and optionally push to r
 | **Interactive CLI**      | Spinners and styled prompts powered by [@clack/prompts](https://github.com/bombshell-dev/clack) |
 | **File Status Preview**  | Shows files with status and colored diff stats (+insertions / -deletions)                       |
 | **Auto-staging**         | Automatically stages all changes before analysis                                                |
-| **Rich Context**         | Git diff, file contents (up to 500 lines), project detection                                    |
-| **Multi-language**       | Detects Node, Bun, Rust, Python, and Go projects                                                |
+| **Rich Context**         | Git diff, file contents (up to 500 lines), branch parsing                                       |
 | **Smart Branch Parsing** | Extracts issue numbers from branch names                                                        |
 | **Style Matching**       | Uses recent commit history to match your style                                                  |
 | **Conventional Commits** | Generates standardized commit messages via OpenRouter API                                       |
