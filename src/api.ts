@@ -18,6 +18,7 @@ export async function generateCommitMessage(
       stream: true,
       reasoning: { exclude: true, effort: "none" },
       messages: [{ role: "user", content: prompt }],
+      provider: { sort: "latency" },
     }),
   });
 

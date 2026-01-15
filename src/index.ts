@@ -172,10 +172,12 @@ async function main(): Promise<void> {
     const generateSpinner = p.spinner();
     generateSpinner.start("Generating commit message...");
 
+    const startTime = performance.now();
     let message: string;
     try {
       message = await generateCommitMessage(context, config);
-      generateSpinner.stop("Message generated");
+      const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+      generateSpinner.stop(`Message generated ${pc.dim(`${elapsed}s`)}`);
     } catch (error) {
       generateSpinner.stop("Failed to generate message");
       p.cancel(error instanceof Error ? error.message : "Unknown error");
