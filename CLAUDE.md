@@ -24,6 +24,7 @@ src/
 ├── index.ts          # Main CLI entry point using @clack/prompts
 ├── config.ts         # Environment config loader and constants
 ├── api.ts            # OpenRouter streaming API client
+├── updater.ts        # Auto-update checker with version caching
 ├── prompt.md         # LLM prompt template (imported as text)
 ├── types/
 │   ├── index.ts      # TypeScript interfaces

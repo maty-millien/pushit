@@ -1,7 +1,10 @@
 import * as p from "@clack/prompts";
 import { homedir } from "os";
 import { join } from "path";
+import pkg from "../package.json";
 import type { Config } from "./types";
+
+export const VERSION = pkg.version;
 
 export const API_URL = "https://openrouter.ai/api/v1/chat/completions";
 export const OPENROUTER_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";

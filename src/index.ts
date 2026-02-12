@@ -1,10 +1,11 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { generateCommitMessage } from "./api";
-import { loadConfig } from "./config";
+import { VERSION, loadConfig } from "./config";
 import * as git from "./git/commands";
 import { buildContext } from "./git/context";
 import type { FileDiffStats, FileStatus, GitOptions } from "./types";
+import { checkForUpdates } from "./updater";
 
 const TYPE_COLORS: Record<string, (s: string) => string> = {
   feat: pc.green,
@@ -126,6 +127,14 @@ function displayFileStatuses(
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+
+  if (args.includes("--version") || args.includes("-v")) {
+    console.log(`pushit v${VERSION}`);
+    process.exit(0);
+  }
+
+  await checkForUpdates();
+
   const dryRun = args.includes("--dry-run");
 
   const gitOptions: GitOptions = { dryRun };

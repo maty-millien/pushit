@@ -6,6 +6,15 @@ INSTALL_DIR="$HOME/.local/bin"
 CONFIG_DIR="$HOME/.config/pushit"
 CONFIG_FILE="$CONFIG_DIR/.env"
 TMPDIR=""
+UPGRADE=false
+
+# --- Parse flags ---
+
+for arg in "$@"; do
+  case "$arg" in
+    --upgrade) UPGRADE=true ;;
+  esac
+done
 
 # --- Colors (degrade gracefully) ---
 
@@ -36,12 +45,26 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# --- Upgrade: verify existing API key ---
+
+if [ "$UPGRADE" = true ]; then
+  EXISTING_KEY=""
+  if [ -f "$CONFIG_FILE" ]; then
+    EXISTING_KEY=$(sed -n 's/^OPENROUTER_API_KEY=//p' "$CONFIG_FILE" 2>/dev/null || true)
+  fi
+  if [ -z "$EXISTING_KEY" ] || [ "$EXISTING_KEY" = "your-api-key-here" ]; then
+    fail "No existing API key configured. Run the full installer: curl -fsSL https://raw.githubusercontent.com/maty-millien/pushit/main/install.sh | bash"
+  fi
+fi
+
 # --- Banner ---
 
-printf "\n"
-printf "${PURPLE}${BOLD}  pushit installer${RESET}\n"
-printf "${DIM}  AI-powered git commits${RESET}\n"
-printf "\n"
+if [ "$UPGRADE" = false ]; then
+  printf "\n"
+  printf "${PURPLE}${BOLD}  pushit installer${RESET}\n"
+  printf "${DIM}  AI-powered git commits${RESET}\n"
+  printf "\n"
+fi
 
 # --- Prerequisites ---
 
@@ -65,33 +88,35 @@ else
   ok "Bun installed ($(bun --version))"
 fi
 
-# --- API Key ---
+# --- API Key (skip in upgrade mode) ---
 
-info "Configuring OpenRouter API key..."
+if [ "$UPGRADE" = false ]; then
+  info "Configuring OpenRouter API key..."
 
-EXISTING_KEY=""
-if [ -f "$CONFIG_FILE" ]; then
-  EXISTING_KEY=$(sed -n 's/^OPENROUTER_API_KEY=//p' "$CONFIG_FILE" 2>/dev/null || true)
-fi
+  EXISTING_KEY=""
+  if [ -f "$CONFIG_FILE" ]; then
+    EXISTING_KEY=$(sed -n 's/^OPENROUTER_API_KEY=//p' "$CONFIG_FILE" 2>/dev/null || true)
+  fi
 
-if [ -n "$EXISTING_KEY" ] && [ "$EXISTING_KEY" != "your-api-key-here" ]; then
-  MASKED="${EXISTING_KEY:0:6}...${EXISTING_KEY: -4}"
-  printf "  Existing key found: ${DIM}%s${RESET}\n" "$MASKED"
-  printf "  Keep existing key? [Y/n] "
-  read -r KEEP_KEY </dev/tty || KEEP_KEY="y"
-  if [ -z "$KEEP_KEY" ] || [[ "$KEEP_KEY" =~ ^[Yy] ]]; then
-    API_KEY="$EXISTING_KEY"
-    ok "Keeping existing key"
+  if [ -n "$EXISTING_KEY" ] && [ "$EXISTING_KEY" != "your-api-key-here" ]; then
+    MASKED="${EXISTING_KEY:0:6}...${EXISTING_KEY: -4}"
+    printf "  Existing key found: ${DIM}%s${RESET}\n" "$MASKED"
+    printf "  Keep existing key? [Y/n] "
+    read -r KEEP_KEY </dev/tty || KEEP_KEY="y"
+    if [ -z "$KEEP_KEY" ] || [[ "$KEEP_KEY" =~ ^[Yy] ]]; then
+      API_KEY="$EXISTING_KEY"
+      ok "Keeping existing key"
+    else
+      printf "  Enter your OpenRouter API key: "
+      read -r API_KEY </dev/tty || fail "Failed to read input"
+      [ -n "$API_KEY" ] || fail "API key cannot be empty. Get one at https://openrouter.ai/keys"
+    fi
   else
+    printf "  Get your key at: ${BLUE}https://openrouter.ai/keys${RESET}\n"
     printf "  Enter your OpenRouter API key: "
     read -r API_KEY </dev/tty || fail "Failed to read input"
-    [ -n "$API_KEY" ] || fail "API key cannot be empty. Get one at https://openrouter.ai/keys"
+    [ -n "$API_KEY" ] || fail "API key cannot be empty"
   fi
-else
-  printf "  Get your key at: ${BLUE}https://openrouter.ai/keys${RESET}\n"
-  printf "  Enter your OpenRouter API key: "
-  read -r API_KEY </dev/tty || fail "Failed to read input"
-  [ -n "$API_KEY" ] || fail "API key cannot be empty"
 fi
 
 # --- Clone & Build ---
@@ -116,37 +141,45 @@ chmod +x "$INSTALL_DIR/pushit"
 
 ok "Binary installed"
 
-# --- Save config ---
+# --- Save config (preserve existing in upgrade mode) ---
 
-info "Saving configuration..."
+if [ "$UPGRADE" = false ]; then
+  info "Saving configuration..."
 
-mkdir -p "$CONFIG_DIR"
-cat > "$CONFIG_FILE" <<EOF
+  mkdir -p "$CONFIG_DIR"
+  cat > "$CONFIG_FILE" <<EOF
 # OpenRouter API Configuration
 # Get your API key from: https://openrouter.ai/keys
 OPENROUTER_API_KEY=$API_KEY
 EOF
-chmod 600 "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE"
 
-ok "Config saved to $CONFIG_FILE"
+  ok "Config saved to $CONFIG_FILE"
+fi
 
-# --- PATH check ---
+# --- PATH check (skip in upgrade mode) ---
 
-if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-  printf "\n"
-  warn "$INSTALL_DIR is not in your PATH"
-  printf "  Add this to your shell config (~/.bashrc, ~/.zshrc, etc.):\n"
-  printf "\n"
-  printf "    ${BOLD}export PATH=\"%s:\$PATH\"${RESET}\n" "$INSTALL_DIR"
-  printf "\n"
+if [ "$UPGRADE" = false ]; then
+  if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    printf "\n"
+    warn "$INSTALL_DIR is not in your PATH"
+    printf "  Add this to your shell config (~/.bashrc, ~/.zshrc, etc.):\n"
+    printf "\n"
+    printf "    ${BOLD}export PATH=\"%s:\$PATH\"${RESET}\n" "$INSTALL_DIR"
+    printf "\n"
+  fi
 fi
 
 # --- Done ---
 
-printf "\n"
-printf "${GREEN}${BOLD}  pushit installed successfully!${RESET}\n"
-printf "\n"
-printf "  ${DIM}Usage:${RESET}\n"
-printf "    pushit            ${DIM}# generate commit from changes${RESET}\n"
-printf "    pushit --dry-run  ${DIM}# test without committing${RESET}\n"
-printf "\n"
+if [ "$UPGRADE" = true ]; then
+  ok "pushit updated successfully"
+else
+  printf "\n"
+  printf "${GREEN}${BOLD}  pushit installed successfully!${RESET}\n"
+  printf "\n"
+  printf "  ${DIM}Usage:${RESET}\n"
+  printf "    pushit            ${DIM}# generate commit from changes${RESET}\n"
+  printf "    pushit --dry-run  ${DIM}# test without committing${RESET}\n"
+  printf "\n"
+fi
