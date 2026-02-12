@@ -71,7 +71,7 @@ async function loadEnvFile(): Promise<Record<string, string>> {
 
 export async function loadConfig(): Promise<Config> {
   const fileEnv = await loadEnvFile();
-  const apiKey = process.env.OPENROUTER_API_KEY || fileEnv.OPENROUTER_API_KEY;
+  const apiKey = fileEnv.OPENROUTER_API_KEY;
 
   if (!apiKey) {
     p.cancel(

@@ -14,7 +14,7 @@ bun run lint       # Lint with ESLint
 bun run typecheck  # Type check with tsc
 bun run format     # Format with Prettier
 bun run build      # Build native executable
-bun run install    # Build and install to ~/.local/bin
+bun run setup    # Build and install to ~/.local/bin
 ```
 
 ## Architecture
@@ -46,9 +46,8 @@ src/
 
 ## Configuration
 
-Config is loaded from `~/.config/pushit/.env` (copied during `bun run install`).
+Config is loaded from `~/.config/pushit/.env` (copied during `bun run setup`).
 
 Environment variables:
 
 - `OPENROUTER_API_KEY` - Required API key
-- `OPENROUTER_MODEL` - Optional, defaults to `google/gemini-2.5-flash-preview-09-2025`

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "bun run src/index.ts --dry-run",
     "build": "bun build src/index.ts --compile --outfile pushit --minify --bytecode",
-    "install": "bun run build && mkdir -p ~/.local/bin && mv pushit ~/.local/bin/ && mkdir -p ~/.config/pushit && cp -n .env ~/.config/pushit/.env 2>/dev/null || true",
+    "setup": "bun run build && mkdir -p ~/.local/bin && mv pushit ~/.local/bin/ && mkdir -p ~/.config/pushit && cp .env ~/.config/pushit/.env",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"./*.json\" \"./*.md\""
