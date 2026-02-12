@@ -31,30 +31,27 @@ Generate conventional commit messages from your changes and optionally push to r
 
 ## Installation
 
+```bash
+curl -fsSL https://raw.githubusercontent.com/maty-millien/pushit/main/install.sh | bash
+```
+
+This installs Bun (if needed), prompts for your [OpenRouter API key](https://openrouter.ai/keys), builds the binary, and installs it to `~/.local/bin`.
+
+<details>
+<summary>Manual installation</summary>
+
 > **Prerequisites:** [Bun](https://bun.sh) runtime
 
 ```bash
 git clone https://github.com/maty-millien/pushit
 cd pushit
 bun install
-bun run install
+bun run setup
 ```
 
-This builds the binary and installs it to `~/.local/bin`. Make sure `~/.local/bin` is in your PATH.
+Copy `.env.example` to `~/.config/pushit/.env` and add your API key.
 
-## Setup
-
-**1. Get an API key from [openrouter.ai](https://openrouter.ai)**
-
-**2. Configure your environment:**
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and replace `your-api-key-here` with your actual API key. You can also change the model if desired.
-
-The install script copies `.env` to `~/.config/pushit/.env` where the binary reads it from.
+</details>
 
 ## Usage
 
@@ -97,7 +94,7 @@ pushit --dry-run  # Test without committing
 | `bun run typecheck` | Type check with TypeScript        |
 | `bun run format`    | Format with Prettier              |
 | `bun run build`     | Build native executable           |
-| `bun run install`   | Build and install to ~/.local/bin |
+| `bun run setup`     | Build and install to ~/.local/bin |
 
 ## Requirements
 
