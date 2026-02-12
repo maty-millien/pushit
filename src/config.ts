@@ -65,7 +65,6 @@ async function loadEnvFile(): Promise<Record<string, string>> {
     }
     return env;
   } catch {
-    // Return empty config if file can't be read
     return {};
   }
 }
