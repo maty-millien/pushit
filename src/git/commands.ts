@@ -32,16 +32,6 @@ export async function isGitRepo(): Promise<boolean> {
   return result.success && result.stdout === "true";
 }
 
-export async function hasChanges(): Promise<boolean> {
-  const [staged, unstaged, untracked] = await Promise.all([
-    git(["diff", "--cached", "--quiet"]),
-    git(["diff", "--quiet"]),
-    git(["ls-files", "--others", "--exclude-standard"]),
-  ]);
-
-  return !staged.success || !unstaged.success || untracked.stdout.length > 0;
-}
-
 export async function stageAll(options: GitOptions = {}): Promise<void> {
   if (options.dryRun) return;
   await git(["add", "-A"]);
@@ -57,25 +47,6 @@ export async function getStagedDiff(options: GitOptions = {}): Promise<string> {
   }
   const result = await git(["diff", "--cached"]);
   return result.stdout;
-}
-
-export async function getChangedFiles(
-  options: GitOptions = {},
-): Promise<string[]> {
-  if (options.dryRun) {
-    const [staged, unstaged, untracked] = await Promise.all([
-      git(["diff", "--cached", "--name-only"]),
-      git(["diff", "--name-only"]),
-      git(["ls-files", "--others", "--exclude-standard"]),
-    ]);
-    const allFiles = [staged.stdout, unstaged.stdout, untracked.stdout]
-      .filter(Boolean)
-      .join("\n");
-    return [...new Set(allFiles.split("\n").filter(Boolean))];
-  }
-  const result = await git(["diff", "--cached", "--name-only"]);
-  if (!result.stdout) return [];
-  return result.stdout.split("\n").filter(Boolean);
 }
 
 export async function getStatusWithBranch(): Promise<{

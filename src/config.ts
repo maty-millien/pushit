@@ -6,10 +6,10 @@ import type { Config } from "./types";
 
 export const VERSION = pkg.version;
 
-export const API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const API_URL = "https://openrouter.ai/api/v1/chat/completions";
 // export const OPENROUTER_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";
-export const OPENROUTER_MODEL = "mistralai/ministral-3b-2512";
-export const CONFIG_PATH = join(homedir(), ".config", "pushit", ".env");
+const OPENROUTER_MODEL = "mistralai/ministral-3b-2512";
+const CONFIG_PATH = join(homedir(), ".config", "pushit", ".env");
 
 export const MAX_DIFF_CHARS = 24_000;
 export const MAX_PROMPT_CHARS = 32_000;
