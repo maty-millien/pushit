@@ -7,7 +7,7 @@ import type { Config } from "./types";
 export const VERSION = pkg.version;
 
 const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-// export const OPENROUTER_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";
+// const OPENROUTER_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";
 const OPENROUTER_MODEL = "mistralai/ministral-3b-2512";
 const CONFIG_PATH = join(homedir(), ".config", "pushit", ".env");
 
