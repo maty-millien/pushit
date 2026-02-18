@@ -133,17 +133,15 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  await checkForUpdates();
+  checkForUpdates();
 
   const dryRun = args.includes("--dry-run");
 
   const gitOptions: GitOptions = { dryRun };
 
-  // Parallel validation: config + git checks
-  const [config, isRepo, hasChangesResult] = await Promise.all([
+  const [config, isRepo] = await Promise.all([
     loadConfig(),
     git.isGitRepo(),
-    git.hasChanges(),
   ]);
 
   if (!isRepo) {
@@ -151,29 +149,26 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  if (!hasChangesResult) {
-    p.outro("No changes to commit");
-    process.exit(0);
-  }
-
   const stageSpinner = p.spinner();
   stageSpinner.start("Staging changes...");
   await git.stageAll(gitOptions);
   stageSpinner.stop("Changes staged");
 
-  // Parallel: analyze context + check remote
   const contextSpinner = p.spinner();
   contextSpinner.start("Analyzing changes...");
-  const [context, remoteExists] = await Promise.all([
+  const [context, remoteExists, diffStatsArray] = await Promise.all([
     buildContext(gitOptions),
     git.hasRemote(),
+    git.getDiffStats(gitOptions),
   ]);
   contextSpinner.stop("Analysis complete");
 
-  const [fileStatuses, diffStatsArray] = await Promise.all([
-    Promise.resolve(git.parseStatus(context.status)),
-    git.getDiffStats(gitOptions),
-  ]);
+  if (!context.diff && !context.status) {
+    p.outro("No changes to commit");
+    process.exit(0);
+  }
+
+  const fileStatuses = git.parseStatus(context.status);
   const diffStats = new Map(diffStatsArray.map((s) => [s.path, s]));
   displayFileStatuses(fileStatuses, diffStats);
 

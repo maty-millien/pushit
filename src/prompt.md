@@ -48,13 +48,8 @@ Output ONLY the commit message - no explanations. But let your reasoning inform 
 **Recent commits (for style):**
 {{commitHistory}}
 
-**Changed files:**
-{{changedFiles}}
-
 **Git status:**
 {{status}}
 
 **Git diff:**
 {{diff}}
-
-{{fileContents}}

@@ -9,8 +9,6 @@ export interface GitContext {
   linkedIssue?: string;
   diff: string;
   status: string;
-  changedFiles: string[];
-  fileContents: Map<string, string>;
   commitHistory: string[];
 }
 

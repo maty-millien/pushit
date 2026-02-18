@@ -1,6 +1,57 @@
 import { buildPrompt } from "./git/context";
 import type { Config, GitContext } from "./types";
 
+const COMMIT_TYPES =
+  "feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert";
+const CONVENTIONAL_RE = new RegExp(
+  `((?:${COMMIT_TYPES})(?:\\([^)]+\\))?:\\s*.+)$`,
+);
+
+function sanitizeMessage(raw: string): string {
+  let msg = raw.trim();
+
+  // Unwrap code fences: ```<optional lang>\n...\n```
+  const fenceMatch = msg.match(/^```\w*\n([\s\S]*?)\n?```$/);
+  if (fenceMatch) {
+    msg = fenceMatch[1].trim();
+  }
+
+  // Unwrap inline backticks
+  if (msg.startsWith("`") && msg.endsWith("`") && !msg.includes("\n")) {
+    msg = msg.slice(1, -1);
+  }
+
+  // Unwrap quotes
+  if (
+    (msg.startsWith('"') && msg.endsWith('"')) ||
+    (msg.startsWith("'") && msg.endsWith("'"))
+  ) {
+    msg = msg.slice(1, -1);
+  }
+
+  // Search all lines for a conventional commit pattern (even mid-line)
+  for (const line of msg.split("\n")) {
+    const match = line.match(CONVENTIONAL_RE);
+    if (match) {
+      msg = match[1].trim();
+      break;
+    }
+  }
+
+  // Fallback: first non-empty line
+  const firstLine = msg.split("\n").find((l) => l.trim() !== "");
+  if (firstLine) {
+    msg = firstLine.trim();
+  }
+
+  // Strip trailing period
+  if (msg.endsWith(".")) {
+    msg = msg.slice(0, -1);
+  }
+
+  return msg.trim();
+}
+
 export async function generateCommitMessage(
   context: GitContext,
   config: Config
@@ -15,7 +66,7 @@ export async function generateCommitMessage(
     },
     body: JSON.stringify({
       model: config.model,
-      stream: true,
+      max_tokens: 64,
       reasoning: { exclude: true, effort: "none" },
       messages: [{ role: "user", content: prompt }],
       provider: { sort: "latency" },
@@ -27,41 +78,14 @@ export async function generateCommitMessage(
     throw new Error(`API error: ${error}`);
   }
 
-  if (!response.body) {
-    throw new Error("No response body");
-  }
-
-  let message = "";
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split("\n");
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const data = line.slice(6);
-      if (data === "[DONE]") continue;
-
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (content) {
-          message += content;
-        }
-      } catch {
-        // Ignore malformed SSE chunks - expected during streaming
-      }
-    }
-  }
+  const data = (await response.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  const message = data.choices?.[0]?.message?.content;
 
   if (!message) {
     throw new Error("No commit message generated");
   }
 
-  return message.trim();
+  return sanitizeMessage(message);
 }

@@ -7,42 +7,12 @@ import type { Config } from "./types";
 export const VERSION = pkg.version;
 
 export const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-export const OPENROUTER_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";
+// export const OPENROUTER_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";
+export const OPENROUTER_MODEL = "mistralai/ministral-3b-2512";
 export const CONFIG_PATH = join(homedir(), ".config", "pushit", ".env");
 
-export const MAX_FILE_SIZE = 50 * 1024; // 50 KB
-export const MAX_LINES_PER_FILE = 500;
-
-export const BINARY_EXTENSIONS = new Set([
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".gif",
-  ".webp",
-  ".ico",
-  ".svg",
-  ".woff",
-  ".woff2",
-  ".ttf",
-  ".eot",
-  ".otf",
-  ".pdf",
-  ".zip",
-  ".tar",
-  ".gz",
-  ".rar",
-  ".mp3",
-  ".mp4",
-  ".wav",
-  ".avi",
-  ".mov",
-  ".exe",
-  ".dll",
-  ".so",
-  ".dylib",
-  ".lock",
-  ".lockb",
-]);
+export const MAX_DIFF_CHARS = 24_000;
+export const MAX_PROMPT_CHARS = 32_000;
 
 async function loadEnvFile(): Promise<Record<string, string>> {
   const file = Bun.file(CONFIG_PATH);
