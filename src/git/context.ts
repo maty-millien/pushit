@@ -3,22 +3,6 @@ import promptTemplate from "../prompt.md" with { type: "text" };
 import type { GitContext, GitOptions } from "../types";
 import * as git from "./commands";
 
-export function extractIssueFromBranch(branch: string): string | undefined {
-  const patterns = [
-    /\/(\d+)-/,
-    /\/([A-Z]+-\d+)/,
-    /issue-(\d+)/i,
-    /#(\d+)/,
-    /-(\d+)$/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = branch.match(pattern);
-    if (match) return match[1];
-  }
-  return undefined;
-}
-
 function truncateDiff(diff: string, maxChars: number): string {
   if (!diff || diff.length <= maxChars) return diff;
 
@@ -40,20 +24,13 @@ function truncateDiff(diff: string, maxChars: number): string {
 export async function buildContext(
   options: GitOptions = {},
 ): Promise<GitContext> {
-  const [branch, status, diff, commitHistory] = await Promise.all([
-    git.getBranchName(),
-    git.getStatus(),
+  const [{ branch, status }, diff, commitHistory] = await Promise.all([
+    git.getStatusWithBranch(),
     git.getStagedDiff(options),
     git.getCommitHistory(5),
   ]);
 
-  return {
-    branch,
-    linkedIssue: extractIssueFromBranch(branch),
-    diff,
-    status,
-    commitHistory,
-  };
+  return { branch, diff, status, commitHistory };
 }
 
 export function buildPrompt(context: GitContext): string {

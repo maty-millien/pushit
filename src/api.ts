@@ -54,7 +54,7 @@ function sanitizeMessage(raw: string): string {
 
 export async function generateCommitMessage(
   context: GitContext,
-  config: Config
+  config: Config,
 ): Promise<string> {
   const prompt = buildPrompt(context);
 

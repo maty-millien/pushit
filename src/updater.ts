@@ -1,7 +1,7 @@
 import * as p from "@clack/prompts";
-import pc from "picocolors";
 import { homedir } from "os";
 import { join } from "path";
+import pc from "picocolors";
 import { VERSION } from "./config";
 
 const CACHE_FILE = join(homedir(), ".config", "pushit", ".update-check");
@@ -23,7 +23,10 @@ function readUpdateCache(): UpdateCache | null {
     const data = JSON.parse(
       new TextDecoder().decode(file.bytes() as unknown as ArrayBuffer),
     );
-    if (typeof data.lastCheck === "number" && typeof data.latestVersion === "string") {
+    if (
+      typeof data.lastCheck === "number" &&
+      typeof data.latestVersion === "string"
+    ) {
       return data as UpdateCache;
     }
     return null;
@@ -118,8 +121,6 @@ export async function checkForUpdates(): Promise<void> {
     spinner.stop(`Updated pushit to ${pc.dim(`v${latestVersion}`)}`);
     reExec();
   } else {
-    spinner.stop(
-      pc.yellow(`Update failed — continuing with v${VERSION}`),
-    );
+    spinner.stop(pc.yellow(`Update failed — continuing with v${VERSION}`));
   }
 }

@@ -139,29 +139,22 @@ async function main(): Promise<void> {
 
   const gitOptions: GitOptions = { dryRun };
 
-  const [config, isRepo] = await Promise.all([
-    loadConfig(),
-    git.isGitRepo(),
-  ]);
+  const [config, isRepo] = await Promise.all([loadConfig(), git.isGitRepo()]);
 
   if (!isRepo) {
     p.cancel("Not a git repository");
     process.exit(1);
   }
 
-  const stageSpinner = p.spinner();
-  stageSpinner.start("Staging changes...");
+  const spinner = p.spinner();
+  spinner.start("Analyzing changes...");
   await git.stageAll(gitOptions);
-  stageSpinner.stop("Changes staged");
-
-  const contextSpinner = p.spinner();
-  contextSpinner.start("Analyzing changes...");
   const [context, remoteExists, diffStatsArray] = await Promise.all([
     buildContext(gitOptions),
     git.hasRemote(),
     git.getDiffStats(gitOptions),
   ]);
-  contextSpinner.stop("Analysis complete");
+  spinner.stop("Analysis complete");
 
   if (!context.diff && !context.status) {
     p.outro("No changes to commit");

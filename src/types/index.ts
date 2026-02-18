@@ -6,7 +6,6 @@ export interface Config {
 
 export interface GitContext {
   branch: string;
-  linkedIssue?: string;
   diff: string;
   status: string;
   commitHistory: string[];

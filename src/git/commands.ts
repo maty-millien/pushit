@@ -78,14 +78,16 @@ export async function getChangedFiles(
   return result.stdout.split("\n").filter(Boolean);
 }
 
-export async function getStatus(): Promise<string> {
-  const result = await git(["status", "--short"]);
-  return result.stdout;
-}
-
-export async function getBranchName(): Promise<string> {
-  const result = await git(["branch", "--show-current"]);
-  return result.stdout || "main";
+export async function getStatusWithBranch(): Promise<{
+  branch: string;
+  status: string;
+}> {
+  const result = await git(["status", "--short", "--branch"]);
+  const lines = result.stdout.split("\n");
+  const branchLine = lines[0] || "";
+  const branch = branchLine.replace(/^## /, "").split("...")[0] || "main";
+  const status = lines.slice(1).filter(Boolean).join("\n");
+  return { branch, status };
 }
 
 export async function getCommitHistory(count: number = 20): Promise<string[]> {
@@ -127,7 +129,7 @@ export async function push(options: GitOptions = {}): Promise<GitResult> {
     return { success: true };
   }
 
-  const branch = await getBranchName();
+  const { branch } = await getStatusWithBranch();
   const upstreamResult = await git([
     "push",
     "--set-upstream",
