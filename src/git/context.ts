@@ -1,5 +1,4 @@
-import { MAX_DIFF_CHARS, MAX_PROMPT_CHARS } from "../config";
-import promptTemplate from "../prompt.md" with { type: "text" };
+import { MAX_DIFF_CHARS, MAX_PROMPT_CHARS, PROMPT_TEMPLATE } from "../config";
 import type { GitContext, GitOptions } from "../types";
 import * as git from "./commands";
 
@@ -36,8 +35,7 @@ export async function buildContext(
 export function buildPrompt(context: GitContext): string {
   const diff = truncateDiff(context.diff, MAX_DIFF_CHARS);
 
-  let prompt = promptTemplate
-    .replace("{{branch}}", context.branch)
+  let prompt = PROMPT_TEMPLATE.replace("{{branch}}", context.branch)
     .replace("{{commitHistory}}", context.commitHistory.join("\n") || "None")
     .replace("{{status}}", context.status || "None")
     .replace("{{diff}}", diff || "None");

@@ -7,12 +7,29 @@ import type { Config } from "./types";
 export const VERSION = pkg.version;
 
 const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-// const OPENROUTER_MODEL = "google/gemini-2.5-flash-lite-preview-09-2025";
 const OPENROUTER_MODEL = "mistralai/ministral-3b-2512";
 const CONFIG_PATH = join(homedir(), ".config", "pushit", ".env");
 
 export const MAX_DIFF_CHARS = 24_000;
 export const MAX_PROMPT_CHARS = 32_000;
+
+export const PROMPT_TEMPLATE = `Generate a conventional commit message for the changes below. Output ONLY the commit message.
+
+Format: <type>(<optional-scope>): <description>
+Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore
+Rules: imperative mood, lowercase, no period, max 50 chars, explain WHY not WHAT
+
+Branch: {{branch}}
+
+Recent commits:
+{{commitHistory}}
+
+Status:
+{{status}}
+
+Diff:
+{{diff}}
+`;
 
 async function loadEnvFile(): Promise<Record<string, string>> {
   const file = Bun.file(CONFIG_PATH);

@@ -22,13 +22,11 @@ bun run setup    # Build and install to ~/.local/bin
 ```
 src/
 ├── index.ts          # Main CLI entry point using @clack/prompts
-├── config.ts         # Environment config loader and constants
+├── config.ts         # Environment config loader, constants, and LLM prompt template
 ├── api.ts            # OpenRouter streaming API client
 ├── updater.ts        # Auto-update checker with version caching
-├── prompt.md         # LLM prompt template (imported as text)
 ├── types/
-│   ├── index.ts      # TypeScript interfaces
-│   └── text.d.ts     # Module declaration for .md imports
+│   └── index.ts      # TypeScript interfaces
 └── git/
     ├── commands.ts   # Async git command wrappers via Bun.spawn
     └── context.ts    # Git context building for LLM prompt
