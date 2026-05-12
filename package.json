@@ -1,25 +1,25 @@
 {
   "name": "pushit",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "bun run src/index.ts --dry-run",
-    "build": "bun build src/index.ts --compile --outfile pushit --minify --bytecode",
+    "build": "bun build src/index.ts --compile --outfile pushit --minify",
     "setup": "bun run build && mkdir -p ~/.local/bin && mv pushit ~/.local/bin/ && mkdir -p ~/.config/pushit && cp .env ~/.config/pushit/.env",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"./*.json\" \"./*.md\""
   },
   "dependencies": {
-    "@clack/prompts": "^1.2.0",
+    "@clack/prompts": "^1.4.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/bun": "^1.3.12",
-    "eslint": "^10.2.0",
-    "prettier": "^3.8.2",
-    "typescript": "^6.0.2",
-    "typescript-eslint": "^8.58.1"
+    "@types/bun": "^1.3.13",
+    "eslint": "^10.3.0",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.3"
   }
 }

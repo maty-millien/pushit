@@ -133,11 +133,11 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  checkForUpdates();
-
   const dryRun = args.includes("--dry-run");
 
   const gitOptions: GitOptions = { dryRun };
+
+  await checkForUpdates();
 
   const [config, isRepo] = await Promise.all([loadConfig(), git.isGitRepo()]);
 

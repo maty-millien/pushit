@@ -127,7 +127,7 @@ TMPDIR=$(mktemp -d)
 git clone --depth 1 --quiet "$REPO" "$TMPDIR/pushit"
 cd "$TMPDIR/pushit"
 bun install --frozen-lockfile --silent
-bun build src/index.ts --compile --outfile pushit --minify --bytecode
+bun build src/index.ts --compile --outfile pushit --minify
 
 ok "Build complete"
 
