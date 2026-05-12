@@ -4,7 +4,14 @@ import { generateCommitMessage } from "./api";
 import { VERSION, loadConfig } from "./config";
 import * as git from "./git/commands";
 import { buildContext } from "./git/context";
-import type { FileDiffStats, FileStatus, GitOptions } from "./types";
+import type {
+  FileDiffStats,
+  FileStatus,
+  GitOptions,
+  GitResult,
+  IndexSnapshot,
+  RepositoryState,
+} from "./types";
 import { checkForUpdates } from "./updater";
 
 const TYPE_COLORS: Record<string, (s: string) => string> = {
@@ -125,6 +132,37 @@ function displayFileStatuses(
   }
 }
 
+function displaySuggestions(suggestions: string[] | undefined): void {
+  if (!suggestions?.length) return;
+  console.log(`${pc.gray("│")}`);
+  for (const suggestion of suggestions) {
+    console.log(`${pc.gray("│")}  ${pc.dim("$")} ${suggestion}`);
+  }
+}
+
+function cancelWithGitResult(result: GitResult | RepositoryState): never {
+  const error = "error" in result ? result.error : undefined;
+  p.cancel(result.message || error || "Git operation failed");
+  displaySuggestions(result.suggestions);
+  process.exit(1);
+}
+
+async function restoreAndExit(
+  snapshot: IndexSnapshot | undefined,
+  options: GitOptions,
+  code: number,
+  message?: string,
+): Promise<never> {
+  const restoreResult = await git.restoreIndex(snapshot, options);
+  if (!restoreResult.success) {
+    p.cancel(restoreResult.message || restoreResult.error || "Restore failed");
+    displaySuggestions(restoreResult.suggestions);
+    process.exit(1);
+  }
+  if (message) p.cancel(message);
+  process.exit(code);
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
@@ -139,24 +177,37 @@ async function main(): Promise<void> {
 
   await checkForUpdates();
 
-  const [config, isRepo] = await Promise.all([loadConfig(), git.isGitRepo()]);
-
-  if (!isRepo) {
-    p.cancel("Not a git repository");
-    process.exit(1);
+  const repoState = await git.getRepositoryState();
+  if (!repoState.ok) {
+    cancelWithGitResult(repoState);
   }
 
   const spinner = p.spinner();
   spinner.start("Analyzing changes...");
-  await git.stageAll(gitOptions);
+  const snapshotResult = await git.snapshotIndex(gitOptions);
+  if (!snapshotResult.success) {
+    spinner.stop("Analysis failed");
+    cancelWithGitResult(snapshotResult);
+  }
+  const indexSnapshot = snapshotResult.snapshot;
+
+  const stageResult = await git.stageAll(gitOptions);
+  if (!stageResult.success) {
+    spinner.stop("Staging failed");
+    await restoreAndExit(indexSnapshot, gitOptions, 1, stageResult.message);
+  }
+
   const [context, remoteExists, diffStatsArray] = await Promise.all([
     buildContext(gitOptions),
-    git.hasRemote(),
+    Promise.resolve(repoState.hasRemote && !repoState.isDetached),
     git.getDiffStats(gitOptions),
   ]);
+  context.branch = repoState.branch;
   spinner.stop("Analysis complete");
 
   if (!context.diff && !context.status) {
+    const restoreResult = await git.restoreIndex(indexSnapshot, gitOptions);
+    if (!restoreResult.success) cancelWithGitResult(restoreResult);
     p.outro("No changes to commit");
     process.exit(0);
   }
@@ -164,6 +215,8 @@ async function main(): Promise<void> {
   const fileStatuses = git.parseStatus(context.status);
   const diffStats = new Map(diffStatsArray.map((s) => [s.path, s]));
   displayFileStatuses(fileStatuses, diffStats);
+
+  const config = await loadConfig();
 
   while (true) {
     const generateSpinner = p.spinner();
@@ -178,8 +231,8 @@ async function main(): Promise<void> {
     } catch (error) {
       generateSpinner.stop("Failed to generate message");
       p.cancel(error instanceof Error ? error.message : "Unknown error");
-      await git.unstage(gitOptions);
-      process.exit(1);
+      await restoreAndExit(indexSnapshot, gitOptions, 1);
+      throw error;
     }
 
     displayCommitMessage(message);
@@ -202,9 +255,7 @@ async function main(): Promise<void> {
     });
 
     if (p.isCancel(action) || action === "cancel") {
-      await git.unstage(gitOptions);
-      p.cancel("Commit cancelled");
-      process.exit(0);
+      await restoreAndExit(indexSnapshot, gitOptions, 0, "Commit cancelled");
     }
 
     if (action === "regenerate") {
@@ -216,8 +267,12 @@ async function main(): Promise<void> {
     const commitResult = await git.commit(message, gitOptions);
     if (!commitResult.success) {
       commitSpinner.stop("Commit failed");
-      p.cancel(`Failed to commit: ${commitResult.error}`);
-      process.exit(1);
+      await restoreAndExit(
+        indexSnapshot,
+        gitOptions,
+        1,
+        commitResult.message || `Failed to commit: ${commitResult.error}`,
+      );
     }
     commitSpinner.stop("Commit created");
 
@@ -228,7 +283,10 @@ async function main(): Promise<void> {
       if (pushResult.success) {
         pushSpinner.stop("Changes pushed successfully!");
       } else {
-        pushSpinner.stop("Failed to push (remote may not be configured)");
+        pushSpinner.stop("Push failed");
+        p.cancel(pushResult.message || pushResult.error || "Failed to push");
+        displaySuggestions(pushResult.suggestions);
+        process.exit(1);
       }
     }
 

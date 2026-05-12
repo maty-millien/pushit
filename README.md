@@ -28,6 +28,7 @@ Generate conventional commit messages from your changes and optionally push to r
 | **Style Matching**       | Uses recent commit history to match your style                                                  |
 | **Conventional Commits** | Generates standardized commit messages via OpenRouter API                                       |
 | **Smart Push**           | Shows "Commit and push" only when a remote exists                                               |
+| **Safe Git Handling**    | Blocks conflicted Git states and restores your original staging on cancel or pre-commit failure |
 
 ## Installation
 
@@ -59,6 +60,18 @@ Copy `.env.example` to `~/.config/pushit/.env` and add your API key.
 pushit            # Normal mode
 pushit --dry-run  # Test without committing
 ```
+
+### Git Safety
+
+`pushit` checks the repository before staging or calling the AI provider. It
+stops with recovery commands if a merge, rebase, cherry-pick, revert, or
+unmerged conflict is in progress.
+
+When `pushit` auto-stages changes, it snapshots the index first. If you cancel,
+message generation fails, analysis fails, or the commit fails, your original
+staged selection is restored. If a commit succeeds but push fails, the local
+commit is kept, the push error is explained, and the command exits with a
+failure status.
 
 ### Example Output
 

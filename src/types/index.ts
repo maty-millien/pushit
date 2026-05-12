@@ -11,9 +11,51 @@ export interface GitContext {
   commitHistory: string[];
 }
 
+export type GitErrorKind =
+  | "git_not_found"
+  | "not_repo"
+  | "conflict_state"
+  | "stage_failed"
+  | "commit_failed"
+  | "push_rejected"
+  | "auth_failed"
+  | "network_failed"
+  | "upstream_missing"
+  | "detached_head"
+  | "unknown";
+
 export interface GitResult {
   success: boolean;
+  exitCode?: number | null;
+  kind?: GitErrorKind;
+  message?: string;
   error?: string;
+  suggestions?: string[];
+}
+
+export interface GitCommandResult {
+  args: string[];
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  success: boolean;
+  error?: string;
+}
+
+export interface RepositoryState {
+  ok: boolean;
+  branch: string;
+  isDetached: boolean;
+  hasRemote: boolean;
+  inProgressOperation?: "merge" | "rebase" | "cherry-pick" | "revert";
+  conflictPaths: string[];
+  kind?: GitErrorKind;
+  message?: string;
+  suggestions?: string[];
+}
+
+export interface IndexSnapshot {
+  tree: string;
 }
 
 export type FileStatusType =
