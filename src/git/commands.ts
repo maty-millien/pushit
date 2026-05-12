@@ -2,28 +2,62 @@ import type {
   FileDiffStats,
   FileStatus,
   FileStatusType,
+  GitCommandResult,
+  GitErrorKind,
   GitOptions,
   GitResult,
+  IndexSnapshot,
+  RepositoryState,
 } from "../types";
+import { existsSync } from "fs";
 
-async function git(args: string[]): Promise<{
-  stdout: string;
-  success: boolean;
-  stderr: string;
-}> {
-  const proc = Bun.spawn(["git", ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  const exitCode = await proc.exited;
+export async function git(args: string[]): Promise<GitCommandResult> {
+  try {
+    const proc = Bun.spawn(["git", ...args], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
+    const exitCode = await proc.exited;
+    return {
+      args,
+      stdout: stdout.trim(),
+      stderr: stderr.trim(),
+      exitCode,
+      success: exitCode === 0,
+    };
+  } catch (error) {
+    return {
+      args,
+      stdout: "",
+      stderr: "",
+      exitCode: null,
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to run git",
+    };
+  }
+}
+
+function resultMessage(result: GitCommandResult): string {
+  return result.stderr || result.error || result.stdout || "Git command failed";
+}
+
+function failedResult(
+  result: GitCommandResult,
+  kind: GitErrorKind,
+  fallback: string,
+  suggestions: string[] = [],
+): GitResult {
   return {
-    stdout: stdout.trim(),
-    stderr: stderr.trim(),
-    success: exitCode === 0,
+    success: false,
+    exitCode: result.exitCode,
+    kind,
+    message: resultMessage(result) || fallback,
+    error: resultMessage(result) || fallback,
+    suggestions,
   };
 }
 
@@ -32,9 +66,161 @@ export async function isGitRepo(): Promise<boolean> {
   return result.success && result.stdout === "true";
 }
 
-export async function stageAll(options: GitOptions = {}): Promise<void> {
-  if (options.dryRun) return;
-  await git(["add", "-A"]);
+async function gitPath(name: string): Promise<string | undefined> {
+  const result = await git(["rev-parse", "--git-path", name]);
+  return result.success && result.stdout ? result.stdout : undefined;
+}
+
+async function detectInProgressOperation(): Promise<
+  RepositoryState["inProgressOperation"]
+> {
+  const mergeHead = await gitPath("MERGE_HEAD");
+  if (mergeHead && existsSync(mergeHead)) return "merge";
+
+  const rebaseMerge = await gitPath("rebase-merge");
+  const rebaseApply = await gitPath("rebase-apply");
+  if (
+    (rebaseMerge && existsSync(rebaseMerge)) ||
+    (rebaseApply && existsSync(rebaseApply))
+  ) {
+    return "rebase";
+  }
+
+  const cherryPickHead = await gitPath("CHERRY_PICK_HEAD");
+  if (cherryPickHead && existsSync(cherryPickHead)) return "cherry-pick";
+
+  const revertHead = await gitPath("REVERT_HEAD");
+  if (revertHead && existsSync(revertHead)) return "revert";
+
+  return undefined;
+}
+
+function parseConflictPaths(statusOutput: string): string[] {
+  const unmerged = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
+  return statusOutput
+    .split("\n")
+    .filter(Boolean)
+    .filter((line) => unmerged.has(line.slice(0, 2)))
+    .map((line) => line.slice(3).trim())
+    .filter(Boolean);
+}
+
+function operationSuggestions(
+  operation: RepositoryState["inProgressOperation"],
+): string[] {
+  if (operation === "rebase") {
+    return ["git status", "git rebase --continue", "git rebase --abort"];
+  }
+  if (operation === "merge") {
+    return ["git status", "git merge --abort"];
+  }
+  if (operation === "cherry-pick") {
+    return [
+      "git status",
+      "git cherry-pick --continue",
+      "git cherry-pick --abort",
+    ];
+  }
+  if (operation === "revert") {
+    return ["git status", "git revert --continue", "git revert --abort"];
+  }
+  return ["git status"];
+}
+
+export async function getRepositoryState(): Promise<RepositoryState> {
+  const inside = await git(["rev-parse", "--is-inside-work-tree"]);
+  if (!inside.success) {
+    const kind = inside.exitCode === null ? "git_not_found" : "not_repo";
+    return {
+      ok: false,
+      branch: "",
+      isDetached: false,
+      hasRemote: false,
+      conflictPaths: [],
+      kind,
+      message:
+        kind === "git_not_found"
+          ? "Git is not available. Install Git and try again."
+          : "Not a git repository.",
+      suggestions: kind === "not_repo" ? ["cd <repo>"] : undefined,
+    };
+  }
+
+  const [branchResult, shortHeadResult, remoteResult, statusResult, operation] =
+    await Promise.all([
+      git(["symbolic-ref", "--quiet", "--short", "HEAD"]),
+      git(["rev-parse", "--short", "HEAD"]),
+      git(["remote"]),
+      git(["status", "--porcelain=v1"]),
+      detectInProgressOperation(),
+    ]);
+  const isDetached = !branchResult.success;
+  const branch = isDetached
+    ? `HEAD detached at ${shortHeadResult.stdout || "unknown"}`
+    : branchResult.stdout;
+  const conflictPaths = parseConflictPaths(statusResult.stdout);
+
+  if (operation || conflictPaths.length > 0) {
+    const label = operation ? `${operation} in progress` : "unmerged paths";
+    return {
+      ok: false,
+      branch,
+      isDetached,
+      hasRemote: remoteResult.stdout.length > 0,
+      inProgressOperation: operation,
+      conflictPaths,
+      kind: "conflict_state",
+      message: `Cannot run while ${label} exists. Resolve or abort it first.`,
+      suggestions: operationSuggestions(operation),
+    };
+  }
+
+  return {
+    ok: true,
+    branch,
+    isDetached,
+    hasRemote: remoteResult.stdout.length > 0,
+    conflictPaths,
+  };
+}
+
+export async function snapshotIndex(
+  options: GitOptions = {},
+): Promise<GitResult & { snapshot?: IndexSnapshot }> {
+  if (options.dryRun) return { success: true, snapshot: { tree: "" } };
+  const result = await git(["write-tree"]);
+  if (!result.success) {
+    return failedResult(result, "unknown", "Failed to snapshot the index.", [
+      "git status",
+    ]);
+  }
+  return { success: true, snapshot: { tree: result.stdout } };
+}
+
+export async function restoreIndex(
+  snapshot: IndexSnapshot | undefined,
+  options: GitOptions = {},
+): Promise<GitResult> {
+  if (options.dryRun || !snapshot) return { success: true };
+  const result = await git(["read-tree", snapshot.tree]);
+  if (!result.success) {
+    return failedResult(result, "unknown", "Failed to restore the index.", [
+      "git reset",
+      "git status",
+    ]);
+  }
+  return { success: true };
+}
+
+export async function stageAll(options: GitOptions = {}): Promise<GitResult> {
+  if (options.dryRun) return { success: true };
+  const result = await git(["add", "-A"]);
+  if (!result.success) {
+    return failedResult(result, "stage_failed", "Failed to stage changes.", [
+      "git status",
+    ]);
+  }
+  return { success: true };
 }
 
 export async function getStagedDiff(options: GitOptions = {}): Promise<string> {
@@ -77,6 +263,11 @@ export async function hasRemote(): Promise<boolean> {
   return result.stdout.length > 0;
 }
 
+export async function hasOriginRemote(): Promise<boolean> {
+  const result = await git(["remote", "get-url", "origin"]);
+  return result.success;
+}
+
 export async function commit(
   message: string,
   options: GitOptions = {},
@@ -85,9 +276,71 @@ export async function commit(
     return { success: true };
   }
   const result = await git(["commit", "-m", message]);
+  if (result.success) return { success: true, exitCode: result.exitCode };
+  return failedResult(result, "commit_failed", "Failed to create commit.", [
+    "git status",
+  ]);
+}
+
+function classifyPushFailure(output: string): {
+  kind: GitErrorKind;
+  suggestions: string[];
+  summary: string;
+} {
+  const text = output.toLowerCase();
+  if (
+    text.includes("non-fast-forward") ||
+    text.includes("fetch first") ||
+    text.includes("rejected") ||
+    text.includes("failed to push some refs")
+  ) {
+    return {
+      kind: "push_rejected",
+      summary: "Push was rejected by the remote.",
+      suggestions: ["git pull --rebase", "git push"],
+    };
+  }
+  if (
+    text.includes("permission denied") ||
+    text.includes("authentication failed") ||
+    text.includes("could not read username") ||
+    text.includes("repository not found") ||
+    text.includes("access denied")
+  ) {
+    return {
+      kind: "auth_failed",
+      summary: "Push failed because authentication or permissions failed.",
+      suggestions: ["git remote -v", "git push"],
+    };
+  }
+  if (
+    text.includes("could not resolve host") ||
+    text.includes("network is unreachable") ||
+    text.includes("connection timed out") ||
+    text.includes("unable to access")
+  ) {
+    return {
+      kind: "network_failed",
+      summary: "Push failed because the remote could not be reached.",
+      suggestions: ["git remote -v", "git push"],
+    };
+  }
+  if (
+    text.includes("no upstream branch") ||
+    text.includes("set the remote as upstream") ||
+    text.includes("has no upstream") ||
+    text.includes("no configured push destination")
+  ) {
+    return {
+      kind: "upstream_missing",
+      summary: "Push failed because this branch has no upstream.",
+      suggestions: ["git push --set-upstream origin <branch>"],
+    };
+  }
   return {
-    success: result.success,
-    error: result.success ? undefined : result.stderr,
+    kind: "unknown",
+    summary: "Push failed.",
+    suggestions: ["git status", "git push"],
   };
 }
 
@@ -95,22 +348,48 @@ export async function push(options: GitOptions = {}): Promise<GitResult> {
   if (options.dryRun) {
     return { success: true };
   }
+  const state = await getRepositoryState();
+  if (state.isDetached) {
+    return {
+      success: false,
+      kind: "detached_head",
+      message: "Cannot push from a detached HEAD.",
+      error: "Cannot push from a detached HEAD.",
+      suggestions: ["git switch <branch>"],
+    };
+  }
   const result = await git(["push"]);
   if (result.success) {
-    return { success: true };
+    return { success: true, exitCode: result.exitCode };
   }
 
-  const { branch } = await getStatusWithBranch();
-  const upstreamResult = await git([
-    "push",
-    "--set-upstream",
-    "origin",
-    branch,
-  ]);
-  return {
-    success: upstreamResult.success,
-    error: upstreamResult.success ? undefined : upstreamResult.stderr,
-  };
+  const failureText = resultMessage(result);
+  const classified = classifyPushFailure(failureText);
+  if (classified.kind === "upstream_missing" && (await hasOriginRemote())) {
+    const upstreamResult = await git([
+      "push",
+      "--set-upstream",
+      "origin",
+      state.branch,
+    ]);
+    if (upstreamResult.success) {
+      return { success: true, exitCode: upstreamResult.exitCode };
+    }
+    const upstreamFailure = classifyPushFailure(resultMessage(upstreamResult));
+    return failedResult(
+      upstreamResult,
+      upstreamFailure.kind,
+      upstreamFailure.summary,
+      upstreamFailure.suggestions,
+    );
+  }
+
+  return failedResult(
+    result,
+    classified.kind,
+    classified.summary,
+    classified.suggestions,
+  );
 }
 
 export async function unstage(options: GitOptions = {}): Promise<void> {

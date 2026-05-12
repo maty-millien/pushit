@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "bun run src/index.ts --dry-run",
-    "build": "bun build src/index.ts --compile --outfile pushit --minify",
-    "setup": "bun run build && mkdir -p ~/.local/bin && mv pushit ~/.local/bin/ && mkdir -p ~/.config/pushit && cp .env ~/.config/pushit/.env",
+    "build": "bun build src/index.ts --compile --outfile build/pushit --minify",
+    "setup": "bun run build && mkdir -p ~/.local/bin && mv build/pushit ~/.local/bin/ && mkdir -p ~/.config/pushit && cp .env ~/.config/pushit/.env",
     "lint": "eslint src/",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"./*.json\" \"./*.md\""
   },
